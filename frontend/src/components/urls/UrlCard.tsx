@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { URLItem } from '../../types';
 import { StatusDot } from '../ui/StatusDot';
 import { Badge } from '../ui/Badge';
@@ -19,6 +20,7 @@ function timeAgo(isoString: string): string {
 
 export function UrlCard({ url, onDelete }: UrlCardProps) {
   const [isConfirming, setIsConfirming] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let timer: number;
@@ -28,7 +30,8 @@ export function UrlCard({ url, onDelete }: UrlCardProps) {
     return () => window.clearTimeout(timer);
   }, [isConfirming]);
 
-  const handleDeleteClick = () => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (isConfirming) {
       onDelete(url.id);
     } else {
@@ -43,7 +46,11 @@ export function UrlCard({ url, onDelete }: UrlCardProps) {
   };
 
   return (
-    <div className={styles.card}>
+    <div 
+      className={styles.card} 
+      onClick={() => navigate(`/urls/${url.id}`)}
+      style={{ cursor: 'pointer' }}
+    >
       <div className={styles.header}>
         <div className={styles.name}>{url.name}</div>
         <StatusDot status={url.status} />
@@ -59,7 +66,7 @@ export function UrlCard({ url, onDelete }: UrlCardProps) {
             <button 
               className={styles.deleteBtn} 
               style={{ border: 'none', background: 'transparent', color: '#666' }}
-              onClick={() => setIsConfirming(false)}
+              onClick={(e) => { e.stopPropagation(); setIsConfirming(false); }}
             >
               cancel
             </button>

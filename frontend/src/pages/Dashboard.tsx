@@ -4,10 +4,14 @@ import { TopBar } from '../components/layout/TopBar';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Toast } from '../components/ui/Toast';
 import { useUrls } from '../hooks/useUrls';
+import { useWebSocket } from '../hooks/useWebSocket';
+import { useLiveStatus } from '../hooks/useLiveStatus';
 import styles from '../components/urls/UrlCard.module.css'; // Just for skeleton base
 
 export function Dashboard() {
   const { urls, isLoading, error, addUrl, deleteUrl, clearError } = useUrls();
+  const { lastMessage, isConnected } = useWebSocket(import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws');
+  const liveUrls = useLiveStatus(urls, lastMessage);
 
   const renderSkeleton = () => (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
@@ -19,7 +23,7 @@ export function Dashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <TopBar />
+      <TopBar isConnected={isConnected} />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar />
         <main style={{ flex: 1, padding: 32, overflowY: 'auto', backgroundColor: '#fff' }}>
@@ -32,7 +36,7 @@ export function Dashboard() {
           {isLoading && urls.length === 0 ? (
             renderSkeleton()
           ) : (
-            <UrlList urls={urls} onDelete={deleteUrl} />
+            <UrlList urls={liveUrls} onDelete={deleteUrl} />
           )}
 
           {error && <Toast message={error} onDismiss={clearError} />}

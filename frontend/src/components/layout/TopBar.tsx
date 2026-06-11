@@ -1,7 +1,10 @@
-import { Badge } from '../ui/Badge';
 import { StatusDot } from '../ui/StatusDot';
 
-export function TopBar() {
+interface TopBarProps {
+  isConnected?: boolean;
+}
+
+export function TopBar({ isConnected = false }: TopBarProps) {
   return (
     <header
       style={{
@@ -10,20 +13,16 @@ export function TopBar() {
         borderBottom: '1px solid #e0e0e0',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
         padding: '0 24px',
+        justifyContent: 'space-between',
       }}
     >
       <div style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>Uptime Monitor</div>
-      <div>
-        <Badge
-          variant="success"
-          label={
-            <>
-              <StatusDot status="UP" /> Live
-            </>
-          }
-        />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+        <StatusDot status={isConnected ? 'UP' : 'PENDING'} />
+        <span style={{ color: isConnected ? '#1D9E75' : '#999', fontWeight: 500 }}>
+          {isConnected ? 'Live' : 'Reconnecting...'}
+        </span>
       </div>
     </header>
   );
