@@ -10,6 +10,7 @@ export interface PingResult {
   url_id: number;
   status: 'UP' | 'DOWN';
   latency_ms: number | null;
+  status_code?: number | null;
   checked_at: string;
 }
 

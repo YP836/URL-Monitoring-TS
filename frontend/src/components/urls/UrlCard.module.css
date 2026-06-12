@@ -1,16 +1,20 @@
 .card {
-  background-color: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035));
+  border: 1px solid rgba(198, 161, 91, 0.22);
+  border-radius: 8px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: border-color 0.2s ease;
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(14px);
+  transition: border-color 0.6s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .card:hover {
-  border-color: #999;
+  border-color: rgba(232, 199, 127, 0.58);
+  transform: translateY(-2px);
+  box-shadow: 0 26px 72px rgba(0, 0, 0, 0.34);
 }
 
 .header {
@@ -22,12 +26,12 @@
 .name {
   font-weight: bold;
   font-size: 1.125rem;
-  color: #111;
+  color: #F7F0E4;
 }
 
 .address {
   font-size: 0.875rem;
-  color: #666;
+  color: #A9A195;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -42,13 +46,13 @@
 
 .time {
   font-size: 0.75rem;
-  color: #888;
+  color: #8F877B;
 }
 
 .deleteBtn {
   background: transparent;
-  border: 1px solid #e0e0e0;
-  color: #d93025;
+  border: 1px solid rgba(226, 75, 74, 0.35);
+  color: #FF8D84;
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 0.75rem;
@@ -57,6 +61,6 @@
 }
 
 .deleteBtn:hover {
-  background-color: #fce8e6;
-  border-color: #fce8e6;
+  background-color: rgba(226, 75, 74, 0.12);
+  border-color: rgba(226, 75, 74, 0.55);
 }

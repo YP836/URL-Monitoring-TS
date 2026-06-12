@@ -35,3 +35,7 @@ export const getUrlDetail = async (id: number): Promise<URLDetail> => {
   const response = await client.get<URLDetail>(`/api/v1/urls/${id}`);
   return response.data;
 };
+
+export const checkUrlNow = async (_id: number): Promise<void> => {
+  throw new Error('Not implemented - coming in Phase 6');
+};

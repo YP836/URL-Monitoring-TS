@@ -1,4 +1,5 @@
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from 'recharts';
+import { useEffect, useState } from 'react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, ReferenceDot } from 'recharts';
 import { PingHistoryRead } from '../../types';
 
 interface LatencyChartProps {
@@ -7,9 +8,22 @@ interface LatencyChartProps {
 }
 
 export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
+  const [showLatestHighlight, setShowLatestHighlight] = useState(false);
+
+  useEffect(() => {
+    if (pings.length === 0) {
+      return undefined;
+    }
+
+    setShowLatestHighlight(true);
+    const timeout = setTimeout(() => setShowLatestHighlight(false), 1500);
+
+    return () => clearTimeout(timeout);
+  }, [pings.length]);
+
   if (pings.length === 0) {
     return (
-      <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+      <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A9A195' }}>
         No ping history yet
       </div>
     );
@@ -26,13 +40,22 @@ export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
       fullDate: ping.checked_at,
     };
   });
+  const latestPoint = data[data.length - 1];
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length > 0) {
       const point = payload[0].payload;
       const latencyText = point.latency !== null ? `${point.latency}ms` : 'timeout';
       return (
-        <div style={{ backgroundColor: 'white', border: '1px solid #e0e0e0', borderRadius: 8, padding: 10 }}>
+        <div
+          style={{
+            backgroundColor: '#121316',
+            border: '1px solid rgba(198, 161, 91, 0.28)',
+            borderRadius: 8,
+            padding: 10,
+            color: '#F7F0E4',
+          }}
+        >
           {point.timeLabel} &middot; {latencyText} &middot; {point.status}
         </div>
       );
@@ -44,15 +67,25 @@ export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
     <div style={{ width: '100%', height }}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis dataKey="timeLabel" tick={{ fontSize: 12, fill: '#666' }} axisLine={false} tickLine={false} />
-          <YAxis dataKey="latency" domain={[0, 'auto']} tick={{ fontSize: 12, fill: '#666' }} axisLine={false} tickLine={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+          <XAxis dataKey="timeLabel" tick={{ fontSize: 12, fill: '#A9A195' }} axisLine={false} tickLine={false} />
+          <YAxis dataKey="latency" domain={[0, 'auto']} tick={{ fontSize: 12, fill: '#A9A195' }} axisLine={false} tickLine={false} />
           <Tooltip content={<CustomTooltip />} />
           
           {data.map((entry, index) => 
             !entry.isUp ? (
               <ReferenceLine key={`ref-${index}`} x={entry.timeLabel} stroke="#E24B4A" strokeDasharray="3 3" />
             ) : null
+          )}
+
+          {showLatestHighlight && latestPoint && latestPoint.latency !== null && (
+            <ReferenceDot
+              x={latestPoint.timeLabel}
+              y={latestPoint.latency}
+              fill="#1D9E75"
+              stroke="#1D9E75"
+              r={4}
+            />
           )}
           
           <Line 
@@ -62,7 +95,8 @@ export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
             strokeWidth={2} 
             dot={false} 
             connectNulls={false}
-            isAnimationActive={false}
+            isAnimationActive={true}
+            animationDuration={400}
           />
         </LineChart>
       </ResponsiveContainer>

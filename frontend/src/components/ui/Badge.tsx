@@ -6,15 +6,18 @@ interface BadgeProps {
 }
 
 export function Badge({ label, variant }: BadgeProps) {
-  let bgColor = '#e0e0e0';
-  let textColor = '#333';
+  let bgColor = 'rgba(255, 255, 255, 0.09)';
+  let textColor = '#F7F0E4';
+  let borderColor = 'rgba(255, 255, 255, 0.12)';
 
   if (variant === 'success') {
-    bgColor = '#e6f4ea';
-    textColor = '#1e8e3e';
+    bgColor = 'rgba(29, 158, 117, 0.14)';
+    textColor = '#72E0BC';
+    borderColor = 'rgba(29, 158, 117, 0.3)';
   } else if (variant === 'danger') {
-    bgColor = '#fce8e6';
-    textColor = '#d93025';
+    bgColor = 'rgba(226, 75, 74, 0.14)';
+    textColor = '#FF8D84';
+    borderColor = 'rgba(226, 75, 74, 0.3)';
   }
 
   return (
@@ -28,6 +31,7 @@ export function Badge({ label, variant }: BadgeProps) {
         fontWeight: 600,
         backgroundColor: bgColor,
         color: textColor,
+        border: `1px solid ${borderColor}`,
         gap: 6,
       }}
     >

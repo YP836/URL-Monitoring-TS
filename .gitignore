@@ -6,3 +6,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 celerybeat-schedule*
+run-logs/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts

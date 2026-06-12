@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { URLItem } from '../../types';
+import { PingResult, URLItem } from '../../types';
 import { StatusDot } from '../ui/StatusDot';
 import { Badge } from '../ui/Badge';
 import styles from './UrlCard.module.css';
@@ -8,6 +8,7 @@ import styles from './UrlCard.module.css';
 interface UrlCardProps {
   url: URLItem;
   onDelete: (id: number) => void;
+  lastPing?: PingResult | null;
 }
 
 function timeAgo(isoString: string): string {
@@ -18,8 +19,10 @@ function timeAgo(isoString: string): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-export function UrlCard({ url, onDelete }: UrlCardProps) {
+export function UrlCard({ url, onDelete, lastPing }: UrlCardProps) {
   const [isConfirming, setIsConfirming] = useState(false);
+  const [flashStatus, setFlashStatus] = useState<'UP' | 'DOWN' | null>(null);
+  const previousStatus = useRef(url.status);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,6 +32,18 @@ export function UrlCard({ url, onDelete }: UrlCardProps) {
     }
     return () => window.clearTimeout(timer);
   }, [isConfirming]);
+
+  useEffect(() => {
+    if (previousStatus.current !== url.status && url.status !== 'PENDING') {
+      setFlashStatus(url.status);
+      const timer = window.setTimeout(() => setFlashStatus(null), 600);
+      previousStatus.current = url.status;
+      return () => window.clearTimeout(timer);
+    }
+
+    previousStatus.current = url.status;
+    return undefined;
+  }, [url.status]);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -49,7 +64,10 @@ export function UrlCard({ url, onDelete }: UrlCardProps) {
     <div 
       className={styles.card} 
       onClick={() => navigate(`/urls/${url.id}`)}
-      style={{ cursor: 'pointer' }}
+      style={{
+        cursor: 'pointer',
+        borderColor: flashStatus === 'UP' ? '#1D9E75' : flashStatus === 'DOWN' ? '#E24B4A' : undefined,
+      }}
     >
       <div className={styles.header}>
         <div className={styles.name}>{url.name}</div>
@@ -60,7 +78,15 @@ export function UrlCard({ url, onDelete }: UrlCardProps) {
         <Badge variant={getBadgeVariant(url.status)} label={url.status} />
       </div>
       <div className={styles.footer}>
-        <div className={styles.time}>Added: {timeAgo(url.created_at)}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div className={styles.time}>Added: {timeAgo(url.created_at)}</div>
+          {lastPing && (
+            <Badge
+              variant={lastPing.status === 'UP' ? 'neutral' : 'danger'}
+              label={lastPing.status === 'UP' && lastPing.latency_ms !== null ? `${lastPing.latency_ms}ms` : 'timeout'}
+            />
+          )}
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {isConfirming && (
             <button 

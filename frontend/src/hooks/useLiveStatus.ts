@@ -1,18 +1,35 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { URLItem, PingResult } from '../types';
 
-export function useLiveStatus(urls: URLItem[], lastMessage: PingResult | null): URLItem[] {
-  return useMemo(() => {
-    if (!lastMessage) return urls;
-    
+interface LiveStatusState {
+  liveUrls: URLItem[];
+  lastPingMap: Record<number, PingResult>;
+}
+
+export function useLiveStatus(urls: URLItem[], lastMessage: PingResult | null): LiveStatusState {
+  const [lastPingMap, setLastPingMap] = useState<Record<number, PingResult>>({});
+
+  useEffect(() => {
+    if (!lastMessage) return;
+
+    setLastPingMap(previous => ({
+      ...previous,
+      [lastMessage.url_id]: lastMessage,
+    }));
+  }, [lastMessage]);
+
+  const liveUrls = useMemo(() => {
     return urls.map(url => {
-      if (url.id === lastMessage.url_id) {
+      const lastPing = lastPingMap[url.id];
+      if (lastPing) {
         return {
           ...url,
-          status: lastMessage.status as 'UP' | 'DOWN' | 'PENDING'
+          status: lastPing.status as 'UP' | 'DOWN' | 'PENDING',
         };
       }
       return url;
     });
-  }, [urls, lastMessage]);
+  }, [lastPingMap, urls]);
+
+  return { liveUrls, lastPingMap };
 }

@@ -1,33 +1,16 @@
-import { URLItem } from '../../types';
+import { PingResult, URLItem } from '../../types';
 import { UrlCard } from './UrlCard';
 
 interface UrlListProps {
   urls: URLItem[];
   onDelete: (id: number) => void;
+  lastPingMap: Record<number, PingResult>;
 }
 
-export function UrlList({ urls, onDelete }: UrlListProps) {
-  if (urls.length === 0) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: 200,
-          color: '#888',
-          border: '1px dashed #ccc',
-          borderRadius: 8,
-          backgroundColor: '#fafafa',
-        }}
-      >
-        No URLs being monitored yet. Add one above.
-      </div>
-    );
-  }
-
+export function UrlList({ urls, onDelete, lastPingMap }: UrlListProps) {
   return (
     <div
+      className="url-grid"
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
@@ -35,7 +18,7 @@ export function UrlList({ urls, onDelete }: UrlListProps) {
       }}
     >
       {urls.map((url) => (
-        <UrlCard key={url.id} url={url} onDelete={onDelete} />
+        <UrlCard key={url.id} url={url} onDelete={onDelete} lastPing={lastPingMap[url.id] ?? null} />
       ))}
     </div>
   );
