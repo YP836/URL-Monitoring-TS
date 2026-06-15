@@ -1,15 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PingResult, URLItem } from '../../types';
+import { CheckType, PingResult, URLItem } from '../../types';
 import { StatusDot } from '../ui/StatusDot';
 import { Badge } from '../ui/Badge';
-import { EditUrlModal } from './EditUrlModal';
 import styles from './UrlCard.module.css';
 
 interface UrlCardProps {
   url: URLItem;
   onDelete: (id: number) => void;
-  onEdit: (url: URLItem) => void;
+  onInspect: (url: URLItem) => void;
+  extraData?: Record<string, unknown>;
   lastPing?: PingResult | null;
 }
 
@@ -21,25 +20,77 @@ function timeAgo(isoString: string): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-function formatInterval(seconds: number): string {
-  if (seconds === 30) return '30s';
-  if (seconds === 60) return '1m';
-  if (seconds === 300) return '5m';
-  if (seconds === 1800) return '30m';
-  if (seconds === 3600) return '1h';
-  if (seconds === 21600) return '6h';
-  if (seconds === 43200) return '12h';
-  if (seconds === 86400) return '1d';
-  if (seconds === 259200) return '3d';
-  return `${seconds}s`;
+function splitCheckTypes(checkType: string | undefined): CheckType[] {
+  const knownChecks: CheckType[] = ['HTTP', 'SSL_EXPIRY', 'TTFB', 'KEYWORD', 'DOWNTIME_DURATION', 'ERROR_RATE'];
+  const checks = (checkType ?? 'HTTP')
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item): item is CheckType => knownChecks.includes(item as CheckType));
+  return checks.length > 0 ? checks : ['HTTP'];
 }
 
-export function UrlCard({ url, onDelete, onEdit, lastPing }: UrlCardProps) {
+function getExtraDataForCheck(checkType: CheckType, extraData?: Record<string, unknown>) {
+  if (!extraData) return null;
+  const nestedExtraData = extraData[checkType] as Record<string, unknown> | undefined;
+  return nestedExtraData ?? extraData;
+}
+
+function getSignalLine(checkType: CheckType, allExtraData?: Record<string, unknown>) {
+  const extraData = getExtraDataForCheck(checkType, allExtraData);
+  if (!extraData) return null;
+
+  if (checkType === 'SSL_EXPIRY') {
+    const d = extraData.days_remaining as number;
+    return {
+      text: `🔒 ${d} days remaining`,
+      color: d > 30 ? '#1D9E75' : d >= 7 ? '#BA7517' : '#E24B4A',
+    };
+  }
+
+  if (checkType === 'TTFB') {
+    const t = extraData.ttfb_ms as number;
+    return {
+      text: `⚡ TTFB ${t}ms`,
+      color: t < 200 ? '#1D9E75' : t < 800 ? '#BA7517' : '#E24B4A',
+    };
+  }
+
+  if (checkType === 'KEYWORD') {
+    const found = extraData.keyword_found as boolean;
+    const keyword = extraData.keyword as string;
+    return {
+      text: found ? `✓ "${keyword}" found` : `✗ "${keyword}" not found`,
+      color: found ? '#1D9E75' : '#E24B4A',
+    };
+  }
+
+  if (checkType === 'DOWNTIME_DURATION') {
+    const m = extraData.downtime_minutes_30d as number;
+    return {
+      text: `${m} min down / 30d`,
+      color: m === 0 ? '#1D9E75' : m < 60 ? '#BA7517' : '#E24B4A',
+    };
+  }
+
+  if (checkType === 'ERROR_RATE') {
+    const r = extraData.error_rate_pct as number;
+    return {
+      text: `${r.toFixed(1)}% error rate`,
+      color: r < 1 ? '#1D9E75' : r < 10 ? '#BA7517' : '#E24B4A',
+    };
+  }
+
+  return null;
+}
+
+export function UrlCard({ url, onDelete, onInspect, extraData, lastPing }: UrlCardProps) {
   const [isConfirming, setIsConfirming] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [flashStatus, setFlashStatus] = useState<'UP' | 'DOWN' | null>(null);
+  const [flashStatus, setFlashStatus] = useState<'UP' | 'DOWN' | 'WARN' | null>(null);
   const previousStatus = useRef(url.status);
-  const navigate = useNavigate();
+  const signalLines = splitCheckTypes(url.check_type)
+    .filter((checkType) => checkType !== 'HTTP')
+    .map((checkType) => getSignalLine(checkType, extraData))
+    .filter((line): line is { text: string; color: string } => line !== null);
 
   useEffect(() => {
     let timer: number;
@@ -73,37 +124,42 @@ export function UrlCard({ url, onDelete, onEdit, lastPing }: UrlCardProps) {
   const getBadgeVariant = (status: string) => {
     if (status === 'UP') return 'success';
     if (status === 'DOWN') return 'danger';
+    if (status === 'WARN') return 'warning';
     return 'neutral';
   };
 
   return (
     <div 
       className={styles.card} 
-      onClick={() => navigate(`/urls/${url.id}`)}
+      onClick={() => onInspect(url)}
       style={{
         cursor: 'pointer',
-        borderColor: flashStatus === 'UP' ? '#1D9E75' : flashStatus === 'DOWN' ? '#E24B4A' : undefined,
+        borderColor:
+          flashStatus === 'UP'
+            ? '#1D9E75'
+            : flashStatus === 'WARN'
+              ? '#BA7517'
+              : flashStatus === 'DOWN'
+                ? '#E24B4A'
+                : undefined,
       }}
     >
       <div className={styles.header}>
         <div className={styles.name}>{url.name}</div>
         <StatusDot status={url.status} />
       </div>
-      
       <div className={styles.address}>
-        <div className={styles.addressRow}>
-          <span className={styles.label}>URL:</span>
-          <span>{url.web_address}</span>
-        </div>
-        <div className={styles.addressRow}>
-          <span className={styles.label}>Status:</span>
-          <Badge variant={getBadgeVariant(url.status)} label={url.status} />
-        </div>
+        <div style={{ marginBottom: 8 }}>{url.web_address}</div>
+        <Badge variant={getBadgeVariant(url.status)} label={url.status} />
+        {signalLines.map((signalLine) => (
+          <div key={signalLine.text} style={{ fontSize: 11, marginTop: 4, color: signalLine.color }}>
+            {signalLine.text}
+          </div>
+        ))}
       </div>
-      
       <div className={styles.footer}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div className={styles.time}>Added: {timeAgo(url.created_at)} &middot; Int: {formatInterval(url.ping_interval_seconds || 30)}</div>
+          <div className={styles.time}>Added: {timeAgo(url.created_at)}</div>
           {lastPing && (
             <Badge
               variant={lastPing.status === 'UP' ? 'neutral' : 'danger'}
@@ -112,43 +168,30 @@ export function UrlCard({ url, onDelete, onEdit, lastPing }: UrlCardProps) {
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {isConfirming ? (
-            <>
-              <button 
-                className={styles.actionBtn} 
-                style={{ border: 'none', background: 'transparent', color: '#6B7280' }}
-                onClick={(e) => { e.stopPropagation(); setIsConfirming(false); }}
-              >
-                cancel
-              </button>
-              <button className={`${styles.actionBtn} ${styles.deleteMode}`} onClick={handleDeleteClick}>
-                Confirm?
-              </button>
-            </>
-          ) : (
-            <>
-              <button 
-                className={styles.actionBtn} 
-                onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }}
-              >
-                Edit
-              </button>
-              <button className={`${styles.actionBtn} ${styles.deleteMode}`} onClick={handleDeleteClick}>
-                Delete
-              </button>
-            </>
+          {isConfirming && (
+            <button 
+              className={styles.deleteBtn} 
+              style={{ border: 'none', background: 'transparent', color: '#666' }}
+              onClick={(e) => { e.stopPropagation(); setIsConfirming(false); }}
+            >
+              cancel
+            </button>
           )}
+          <button
+            className={styles.inspectBtn}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onInspect(url);
+            }}
+          >
+            View details
+          </button>
+          <button className={styles.deleteBtn} onClick={handleDeleteClick}>
+            {isConfirming ? 'Confirm?' : 'Delete'}
+          </button>
         </div>
       </div>
-      {showEditModal && (
-        <div onClick={(e) => e.stopPropagation()}>
-          <EditUrlModal 
-            url={url} 
-            onClose={() => setShowEditModal(false)} 
-            onSuccess={(updated) => { setShowEditModal(false); onEdit(updated); }} 
-          />
-        </div>
-      )}
     </div>
   );
 }

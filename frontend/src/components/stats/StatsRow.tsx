@@ -1,9 +1,10 @@
-import { PingHistoryRead } from '../../types';
+import { CheckType, PingHistoryRead } from '../../types';
 import { MetricKey } from './MetricChooser';
 
 interface StatsRowProps {
   pings: PingHistoryRead[];
   visibleMetrics?: MetricKey[];
+  extraData?: Record<string, unknown> | null;
 }
 
 function computeAvgLatency(pings: PingHistoryRead[]): string {
@@ -43,15 +44,33 @@ function timeAgo(isoString: string): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+function getExtraDataForCheck(checkType: CheckType, extraData: Record<string, unknown> | null) {
+  if (!extraData) return null;
+  const nestedExtraData = extraData[checkType] as Record<string, unknown> | undefined;
+  return nestedExtraData ?? extraData;
+}
+
 export function StatsRow({
   pings,
   visibleMetrics = ['avgLatency', 'p95Latency', 'uptime', 'lastChecked'],
+  extraData = null,
 }: StatsRowProps) {
   const avgLatency = computeAvgLatency(pings);
   const p95Latency = computeP95Latency(pings);
   const uptime30d = computeUptime30d(pings);
   const sortedPings = [...pings].sort((a, b) => new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime());
   const lastChecked = sortedPings.length > 0 ? timeAgo(sortedPings[0].checked_at) : 'Never';
+  const sslData = getExtraDataForCheck('SSL_EXPIRY', extraData);
+  const ttfbData = getExtraDataForCheck('TTFB', extraData);
+  const keywordData = getExtraDataForCheck('KEYWORD', extraData);
+  const downtimeData = getExtraDataForCheck('DOWNTIME_DURATION', extraData);
+  const errorRateData = getExtraDataForCheck('ERROR_RATE', extraData);
+  const sslDaysRemaining = sslData ? (sslData.days_remaining as number | undefined) : undefined;
+  const ttfbMs = ttfbData ? (ttfbData.ttfb_ms as number | undefined) : undefined;
+  const keywordFound = keywordData ? (keywordData.keyword_found as boolean | undefined) : undefined;
+  const keyword = keywordData ? (keywordData.keyword as string | undefined) : undefined;
+  const downtimeMinutes30d = downtimeData ? (downtimeData.downtime_minutes_30d as number | undefined) : undefined;
+  const errorRatePct = errorRateData ? (errorRateData.error_rate_pct as number | undefined) : undefined;
 
   const cardStyle = {
     backgroundColor: '#FFFFFF',
@@ -80,6 +99,31 @@ export function StatsRow({
     { key: 'p95Latency', label: 'P95 latency', value: p95Latency },
     { key: 'uptime', label: 'Uptime (30d)', value: uptime30d },
     { key: 'lastChecked', label: 'Last checked', value: lastChecked },
+    {
+      key: 'sslExpiry',
+      label: 'SSL expiry',
+      value: sslDaysRemaining === undefined ? 'Waiting for check' : `${sslDaysRemaining} days`,
+    },
+    {
+      key: 'ttfb',
+      label: 'TTFB',
+      value: ttfbMs === undefined ? 'Waiting for check' : `${ttfbMs}ms`,
+    },
+    {
+      key: 'keyword',
+      label: 'Keyword',
+      value: keywordFound === undefined ? 'Waiting for check' : `${keyword ?? 'Keyword'} ${keywordFound ? 'found' : 'not found'}`,
+    },
+    {
+      key: 'downtimeDuration',
+      label: 'Downtime (30d)',
+      value: downtimeMinutes30d === undefined ? 'Waiting for check' : `${downtimeMinutes30d} min`,
+    },
+    {
+      key: 'errorRate',
+      label: 'Error rate',
+      value: errorRatePct === undefined ? 'Waiting for check' : `${errorRatePct.toFixed(1)}%`,
+    },
   ];
 
   const visibleCards = cards.filter((card) => visibleMetrics.includes(card.key));

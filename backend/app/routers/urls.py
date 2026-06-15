@@ -1,15 +1,33 @@
+import json
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 
 from ..database import get_connection
-from ..models import PingHistoryRead, URLCreate, URLDetail, URLRead, URLUpdate
+from ..models import PingHistoryRead, URLCreate, URLDetail, URLExtraData, URLRead
 
 
 router = APIRouter()
 
 _mock_urls: dict[int, URLRead] = {}
 _mock_id_counter = 1
+
+
+def _normalize_extra_data(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
+def _split_check_types(value: str | None) -> list[str]:
+    checks = [item.strip().upper() for item in (value or "HTTP").split(",") if item.strip()]
+    return checks or ["HTTP"]
 
 
 @router.get("/urls", response_model=list[URLRead])
@@ -19,7 +37,7 @@ async def list_urls() -> list[URLRead]:
         async with get_connection() as conn:
             rows = await conn.fetch(
                 """
-                SELECT id, web_address, name, status, ping_interval_seconds, created_at
+                SELECT id, web_address, name, status, created_at, check_type, keyword_to_find
                 FROM urls
                 ORDER BY created_at DESC
                 """
@@ -50,13 +68,16 @@ async def create_url(payload: URLCreate) -> URLRead:
 
             row = await conn.fetchrow(
                 """
-                INSERT INTO urls (web_address, name, ping_interval_seconds, status, created_at)
-                VALUES ($1, $2, $3, 'PENDING', NOW())
-                RETURNING id, web_address, name, ping_interval_seconds, status, created_at
+                INSERT INTO urls
+                    (web_address, name, status, created_at, check_type, keyword_to_find, check_interval_seconds)
+                VALUES ($1, $2, 'PENDING', NOW(), $3, $4, $5)
+                RETURNING id, web_address, name, status, created_at, check_type, keyword_to_find
                 """,
                 web_address,
                 payload.name,
-                payload.ping_interval_seconds,
+                payload.check_type,
+                payload.keyword_to_find,
+                payload.check_interval_seconds,
             )
             return URLRead(**dict(row))
     except HTTPException:
@@ -77,8 +98,9 @@ async def create_url(payload: URLCreate) -> URLRead:
             web_address=web_address,
             name=payload.name,
             status="PENDING",
-            ping_interval_seconds=payload.ping_interval_seconds,
             created_at=datetime.now(),
+            check_type=payload.check_type,
+            keyword_to_find=payload.keyword_to_find,
         )
         _mock_urls[url_id] = new_url
         return new_url
@@ -90,7 +112,11 @@ async def get_url_detail(url_id: int) -> URLDetail:
     try:
         async with get_connection() as conn:
             row = await conn.fetchrow(
-                "SELECT id, web_address, name, status, ping_interval_seconds, created_at FROM urls WHERE id = $1",
+                """
+                SELECT id, web_address, name, status, created_at, check_type, keyword_to_find
+                FROM urls
+                WHERE id = $1
+                """,
                 url_id,
             )
             if not row:
@@ -98,7 +124,7 @@ async def get_url_detail(url_id: int) -> URLDetail:
 
             ping_rows = await conn.fetch(
                 """
-                SELECT id, url_id, checked_at, response_time_ms, status_code, is_up
+                SELECT id, url_id, checked_at, response_time_ms, status_code, is_up, check_type, extra_data
                 FROM ping_history
                 WHERE url_id = $1
                 ORDER BY checked_at DESC
@@ -109,7 +135,15 @@ async def get_url_detail(url_id: int) -> URLDetail:
 
             return URLDetail(
                 **dict(row),
-                recent_pings=[PingHistoryRead(**dict(ping)) for ping in ping_rows],
+                recent_pings=[
+                    PingHistoryRead(
+                        **{
+                            **dict(ping),
+                            "extra_data": _normalize_extra_data(dict(ping).get("extra_data")),
+                        }
+                    )
+                    for ping in ping_rows
+                ],
             )
     except HTTPException:
         raise
@@ -121,48 +155,48 @@ async def get_url_detail(url_id: int) -> URLDetail:
         return URLDetail(**url.model_dump(), recent_pings=[])
 
 
-@router.put("/urls/{url_id}", response_model=URLRead)
-async def update_url(url_id: int, payload: URLUpdate) -> URLRead:
-    """Update a monitored URL."""
+@router.get("/urls/{url_id}/extra", response_model=URLExtraData)
+async def get_url_extra_data(url_id: int) -> URLExtraData:
+    """Retrieve the most recent extra_data payload for each selected URL check."""
     try:
         async with get_connection() as conn:
-            # Check if exists
-            existing = await conn.fetchrow("SELECT * FROM urls WHERE id = $1", url_id)
-            if not existing:
+            url_row = await conn.fetchrow("SELECT check_type FROM urls WHERE id = $1", url_id)
+            if not url_row:
                 raise HTTPException(status_code=404, detail="URL not found")
-            
-            new_web_address = str(payload.web_address) if payload.web_address else existing["web_address"]
-            new_name = payload.name if payload.name else existing["name"]
-            new_interval = payload.ping_interval_seconds if payload.ping_interval_seconds is not None else existing.get("ping_interval_seconds", 30)
 
-            row = await conn.fetchrow(
+            selected_checks = _split_check_types(url_row["check_type"])
+            rows = await conn.fetch(
                 """
-                UPDATE urls 
-                SET web_address = $1, name = $2, ping_interval_seconds = $3
-                WHERE id = $4
-                RETURNING id, web_address, name, status, ping_interval_seconds, created_at
+                SELECT DISTINCT ON (check_type) check_type, extra_data, checked_at
+                FROM ping_history
+                WHERE url_id = $1 AND extra_data IS NOT NULL AND check_type = ANY($2::text[])
+                ORDER BY check_type, checked_at DESC
                 """,
-                new_web_address,
-                new_name,
-                new_interval,
                 url_id,
+                selected_checks,
             )
-            return URLRead(**dict(row))
+            if not rows:
+                raise HTTPException(status_code=404, detail="No extra data found")
+
+            extra_by_check: dict[str, Any] = {}
+            latest_checked_at = None
+            for row in rows:
+                row_data = dict(row)
+                check_type = row_data["check_type"]
+                extra_by_check[check_type] = _normalize_extra_data(row_data.get("extra_data")) or {}
+                checked_at = row_data["checked_at"]
+                if latest_checked_at is None or checked_at > latest_checked_at:
+                    latest_checked_at = checked_at
+
+            return URLExtraData(
+                check_type=url_row["check_type"],
+                extra_data=extra_by_check,
+                checked_at=latest_checked_at,
+            )
     except HTTPException:
         raise
     except Exception:
-        url = _mock_urls.get(url_id)
-        if not url:
-            raise HTTPException(status_code=404, detail="URL not found")
-            
-        if payload.name:
-            url.name = payload.name
-        if payload.web_address:
-            url.web_address = str(payload.web_address)
-        if payload.ping_interval_seconds is not None:
-            url.ping_interval_seconds = payload.ping_interval_seconds
-            
-        return url
+        raise HTTPException(status_code=404, detail="No extra data found")
 
 
 @router.delete("/urls/{url_id}", status_code=status.HTTP_204_NO_CONTENT)

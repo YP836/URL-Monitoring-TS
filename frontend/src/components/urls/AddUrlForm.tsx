@@ -1,5 +1,6 @@
 import { useState, FormEvent, useEffect, ClipboardEvent } from 'react';
-import { AddURLPayload } from '../../types';
+import { AddURLPayload, CheckType } from '../../types';
+import { SignalSelector } from './SignalSelector';
 
 interface AddUrlFormProps {
   onAdd: (payload: AddURLPayload) => Promise<void> | void;
@@ -9,12 +10,16 @@ interface AddUrlFormProps {
 export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
-  const [interval, setIntervalVal] = useState(30);
+  const [selectedSignals, setSelectedSignals] = useState<CheckType[]>(['HTTP']);
+  const [keyword, setKeyword] = useState('');
+  const [showSignalOptions, setShowSignalOptions] = useState(false);
   const [touchedName, setTouchedName] = useState(false);
   const [touchedUrl, setTouchedUrl] = useState(false);
+  const [touchedKeyword, setTouchedKeyword] = useState(false);
   const [wasAdded, setWasAdded] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [keywordError, setKeywordError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!touchedName) return;
@@ -30,6 +35,17 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
     else setUrlError(null);
   }, [url, touchedUrl]);
 
+  useEffect(() => {
+    if (!selectedSignals.includes('KEYWORD')) {
+      setKeywordError(null);
+      return;
+    }
+
+    if (!touchedKeyword) return;
+    if (!keyword.trim()) setKeywordError('Keyword is required');
+    else setKeywordError(null);
+  }, [keyword, selectedSignals, touchedKeyword]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setTouchedName(true);
@@ -38,16 +54,35 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
     const isValidUrl = /^https?:\/\/.+\..+/.test(url);
     if (!name.trim() || name.length > 100 || !isValidUrl) return;
 
+    if (!showSignalOptions) {
+      setShowSignalOptions(true);
+      return;
+    }
+
+    setTouchedKeyword(true);
+    const isValidKeyword = !selectedSignals.includes('KEYWORD') || Boolean(keyword.trim());
+    if (!isValidKeyword) setKeywordError('Keyword is required');
+    if (!isValidKeyword) return;
+
     try {
-      await onAdd({ name: name.trim(), web_address: url.trim(), ping_interval_seconds: interval });
+      await onAdd({
+        name: name.trim(),
+        web_address: url.trim(),
+        check_type: selectedSignals.join(','),
+        keyword_to_find: selectedSignals.includes('KEYWORD') ? keyword.trim() : undefined,
+      });
     } catch {
       return;
     }
 
     setName('');
     setUrl('');
+    setKeyword('');
+    setSelectedSignals(['HTTP']);
+    setShowSignalOptions(false);
     setTouchedName(false);
     setTouchedUrl(false);
+    setTouchedKeyword(false);
     setWasAdded(true);
     window.setTimeout(() => setWasAdded(false), 2000);
   };
@@ -63,7 +98,7 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
     }
   };
 
-  const hasErrors = nameError !== null || urlError !== null;
+  const hasErrors = nameError !== null || urlError !== null || keywordError !== null;
 
   return (
     <form className="monitor-form" onSubmit={handleSubmit}>
@@ -94,34 +129,6 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
         {urlError && touchedUrl && <div className="field-error">{urlError}</div>}
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <label htmlFor="ping-interval">Ping interval</label>
-        <select
-          id="ping-interval"
-          value={interval}
-          onChange={(e) => setIntervalVal(Number(e.target.value))}
-          style={{
-            padding: '10px 14px',
-            borderRadius: 6,
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            backgroundColor: '#FCFCFC',
-            fontSize: '15px',
-            color: '#111827',
-            outline: 'none',
-          }}
-        >
-          <option value={30}>30 seconds</option>
-          <option value={60}>1 minute</option>
-          <option value={300}>5 minutes</option>
-          <option value={1800}>30 minutes</option>
-          <option value={3600}>1 hour</option>
-          <option value={21600}>6 hours</option>
-          <option value={43200}>12 hours</option>
-          <option value={86400}>1 day</option>
-          <option value={259200}>3 days</option>
-        </select>
-      </div>
-
       <div style={{ marginTop: 24 }}>
         <button
           type="submit"
@@ -129,9 +136,37 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
           className="primary"
           style={{ color: wasAdded ? '#D8F8EA' : undefined, backgroundColor: wasAdded ? '#1D9E75' : undefined }}
         >
-          {wasAdded ? 'Added' : isLoading ? 'Adding...' : 'Start monitoring'}
+          {wasAdded ? 'Added' : isLoading ? 'Adding...' : showSignalOptions ? 'Save monitor' : 'Start monitoring'}
         </button>
       </div>
+
+      {showSignalOptions && (
+        <div className="monitor-options-panel">
+          <div>
+            <p className="landing-kicker">Choose signal checks</p>
+            <h2>What should this monitor check?</h2>
+            <p>Select one or many. Only the selected checks will run in the background.</p>
+          </div>
+
+          <SignalSelector selectedSignals={selectedSignals} onChange={setSelectedSignals} />
+
+          {selectedSignals.includes('KEYWORD') && (
+            <div className="keyword-field">
+              <label htmlFor="keyword-to-find">Keyword to find</label>
+              <input
+                id="keyword-to-find"
+                type="text"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                onBlur={() => setTouchedKeyword(true)}
+                placeholder='e.g. "Add to cart"'
+                required
+              />
+              {keywordError && touchedKeyword && <div className="field-error">{keywordError}</div>}
+            </div>
+          )}
+        </div>
+      )}
     </form>
   );
 }

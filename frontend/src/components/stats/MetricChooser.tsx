@@ -1,4 +1,13 @@
-export type MetricKey = 'avgLatency' | 'p95Latency' | 'uptime' | 'lastChecked';
+export type MetricKey =
+  | 'avgLatency'
+  | 'p95Latency'
+  | 'uptime'
+  | 'lastChecked'
+  | 'sslExpiry'
+  | 'ttfb'
+  | 'keyword'
+  | 'downtimeDuration'
+  | 'errorRate';
 
 interface MetricOption {
   key: MetricKey;
@@ -11,6 +20,11 @@ const metricOptions: MetricOption[] = [
   { key: 'p95Latency', title: 'P95 latency', detail: 'Slow edge behavior' },
   { key: 'uptime', title: 'Uptime', detail: 'Reliability percentage' },
   { key: 'lastChecked', title: 'Last checked', detail: 'Freshness of signal' },
+  { key: 'sslExpiry', title: 'SSL expiry', detail: 'Certificate days remaining' },
+  { key: 'ttfb', title: 'TTFB', detail: 'Time to first byte' },
+  { key: 'keyword', title: 'Keyword', detail: 'Word found in page body' },
+  { key: 'downtimeDuration', title: 'Downtime', detail: 'Minutes down from history' },
+  { key: 'errorRate', title: 'Error rate', detail: 'Failed ping percentage' },
 ];
 
 interface MetricChooserProps {

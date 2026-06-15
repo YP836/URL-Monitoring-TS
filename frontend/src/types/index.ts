@@ -1,24 +1,35 @@
+export type URLStatus = 'UP' | 'DOWN' | 'WARN' | 'PENDING';
+
+export type CheckType = 'HTTP' | 'SSL_EXPIRY' | 'TTFB' | 'KEYWORD' | 'DOWNTIME_DURATION' | 'ERROR_RATE';
+
 export interface URLItem {
   id: number;
   web_address: string;
   name: string;
-  status: 'UP' | 'DOWN' | 'PENDING';
-  ping_interval_seconds: number;
+  status: URLStatus;
   created_at: string;
+  check_type?: string;
+  keyword_to_find?: string | null;
+  check_interval_seconds?: number;
+  ping_interval_seconds?: number;
 }
 
 export interface PingResult {
   url_id: number;
-  status: 'UP' | 'DOWN';
+  status: URLStatus;
   latency_ms: number | null;
   status_code?: number | null;
   checked_at: string;
+  check_type?: string;
+  extra_data?: Record<string, unknown>;
 }
 
 export interface AddURLPayload {
   web_address: string;
   name: string;
-  ping_interval_seconds: number;
+  check_type?: string;
+  keyword_to_find?: string;
+  check_interval_seconds?: number;
 }
 
 export interface URLDetail extends URLItem {
@@ -32,4 +43,6 @@ export interface PingHistoryRead {
   response_time_ms: number | null;
   status_code: number | null;
   is_up: boolean;
+  check_type?: CheckType | null;
+  extra_data?: Record<string, unknown> | null;
 }

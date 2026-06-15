@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { checkUrlNow, getUrlDetail } from '../api/client';
-import { PingHistoryRead, URLDetail } from '../types';
+import { checkUrlNow, getUrlDetail, getUrlExtraData } from '../api/client';
+import { CheckType, PingHistoryRead, URLDetail } from '../types';
 import { PageLayout } from '../components/layout/PageLayout';
 import { Toast } from '../components/ui/Toast';
 import { StatusDot } from '../components/ui/StatusDot';
 import { RefreshIcon } from '../components/ui/Icons';
 import { ChartSkeleton, Skeleton, StatCardSkeleton } from '../components/ui/Skeleton';
-import { MetricChooser, MetricKey } from '../components/stats/MetricChooser';
+import { MetricKey } from '../components/stats/MetricChooser';
 import { StatsRow } from '../components/stats/StatsRow';
 import { UptimeBar } from '../components/charts/UptimeBar';
 import { LatencyChart } from '../components/charts/LatencyChart';
@@ -23,6 +23,30 @@ function timeAgo(isoString: string): string {
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Failed to load URL details';
 }
+
+function splitCheckTypes(checkType: string | undefined): CheckType[] {
+  const knownChecks: CheckType[] = ['HTTP', 'SSL_EXPIRY', 'TTFB', 'KEYWORD', 'DOWNTIME_DURATION', 'ERROR_RATE'];
+  const checks = (checkType ?? 'HTTP')
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item): item is CheckType => knownChecks.includes(item as CheckType));
+  return checks.length > 0 ? checks : ['HTTP'];
+}
+
+function metricsForCheckType(checkType: string | undefined): MetricKey[] {
+  const selectedChecks = splitCheckTypes(checkType);
+  const metrics: MetricKey[] = [];
+
+  if (selectedChecks.includes('HTTP')) metrics.push('avgLatency', 'p95Latency', 'uptime');
+  if (selectedChecks.includes('SSL_EXPIRY')) metrics.push('sslExpiry');
+  if (selectedChecks.includes('TTFB')) metrics.push('ttfb');
+  if (selectedChecks.includes('KEYWORD')) metrics.push('keyword');
+  if (selectedChecks.includes('DOWNTIME_DURATION')) metrics.push('downtimeDuration');
+  if (selectedChecks.includes('ERROR_RATE')) metrics.push('errorRate');
+
+  return [...metrics, 'lastChecked'];
+}
+
 export function UrlDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -32,8 +56,9 @@ export function UrlDetailPage() {
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [selectedMetrics, setSelectedMetrics] = useState<MetricKey[]>(['avgLatency', 'p95Latency', 'uptime']);
+  const [extraData, setExtraData] = useState<Record<string, unknown> | null>(null);
   const { lastMessage, isConnected, connectionError } = useWebSocket(buildWsUrl(import.meta.env.VITE_API_BASE_URL));
+
   useEffect(() => {
     if (!id) return;
     let mounted = true;
@@ -43,6 +68,7 @@ export function UrlDetailPage() {
         if (!mounted) return;
         setUrl(data);
         setLivePings(data.recent_pings);
+        setExtraData(data.recent_pings[0]?.extra_data ?? null);
         setError(null);
         document.title = `${data.name} - Uptime Monitor`;
       })
@@ -50,6 +76,24 @@ export function UrlDetailPage() {
       .finally(() => mounted && setIsLoading(false));
     return () => { mounted = false; };
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    let mounted = true;
+
+    getUrlExtraData(Number(id))
+      .then((data) => {
+        if (mounted) setExtraData(data.extra_data);
+      })
+      .catch(() => {
+        if (mounted) setExtraData(null);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
   useEffect(() => {
     if (!lastMessage || lastMessage.url_id !== Number(id)) return;
     const nextPing: PingHistoryRead = {
@@ -61,11 +105,22 @@ export function UrlDetailPage() {
       is_up: lastMessage.status === 'UP',
     };
     setLivePings(previous => [nextPing, ...previous].slice(0, 50));
+    if (lastMessage.extra_data && lastMessage.check_type) {
+      setExtraData((previous) => ({
+        ...(previous ?? {}),
+        [lastMessage.check_type as string]: lastMessage.extra_data as Record<string, unknown>,
+      }));
+    }
   }, [id, lastMessage]);
-  const currentStatus = livePings[0]?.is_up === true ? 'UP' : livePings[0]?.is_up === false ? 'DOWN' : url?.status ?? 'PENDING';
+  const currentStatus =
+    lastMessage?.url_id === Number(id)
+      ? lastMessage.status
+      : url?.status ?? (livePings[0]?.is_up === false ? 'DOWN' : 'PENDING');
   const showNotFound = !isLoading && error?.toLowerCase().includes('404');
-  const showLatencyChart = selectedMetrics.includes('avgLatency') || selectedMetrics.includes('p95Latency');
-  const showUptimeChart = selectedMetrics.includes('uptime');
+  const visibleMetrics = metricsForCheckType(url?.check_type);
+  const selectedChecks = splitCheckTypes(url?.check_type);
+  const showLatencyChart = selectedChecks.includes('HTTP');
+  const showUptimeChart = selectedChecks.includes('HTTP');
   const handleCheckNow = async () => {
     if (!id) return;
     setIsChecking(true);
@@ -103,8 +158,7 @@ export function UrlDetailPage() {
               {url.web_address}
             </a>
           </header>
-          <MetricChooser selectedMetrics={selectedMetrics} onChange={setSelectedMetrics} />
-          <StatsRow pings={livePings} visibleMetrics={selectedMetrics} />
+          <StatsRow pings={livePings} visibleMetrics={visibleMetrics} extraData={extraData} />
           {showUptimeChart && <Section title="Uptime - last 90 days"><UptimeBar pings={livePings} /></Section>}
           {showLatencyChart && <Section title="Response time - last 50 pings"><LatencyChart pings={livePings} /></Section>}
           <RecentChecks pings={livePings} />

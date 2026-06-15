@@ -97,3 +97,21 @@
   color: #FFFFFF;
   border-color: #F56565;
 }
+
+.inspectBtn {
+  background: rgba(198, 161, 91, 0.14);
+  border: 1px solid rgba(198, 161, 91, 0.42);
+  color: #E8D6A8;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.inspectBtn:hover {
+  background: rgba(198, 161, 91, 0.22);
+  border-color: rgba(232, 214, 168, 0.65);
+  transform: translateY(-1px);
+}

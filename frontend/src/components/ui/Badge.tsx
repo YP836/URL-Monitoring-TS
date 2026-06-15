@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 
 interface BadgeProps {
   label: string | ReactNode;
-  variant: 'success' | 'danger' | 'neutral';
+  variant: 'success' | 'danger' | 'warning' | 'neutral';
 }
 
 export function Badge({ label, variant }: BadgeProps) {
@@ -18,6 +18,10 @@ export function Badge({ label, variant }: BadgeProps) {
     bgColor = 'rgba(226, 75, 74, 0.14)';
     textColor = '#FF8D84';
     borderColor = 'rgba(226, 75, 74, 0.3)';
+  } else if (variant === 'warning') {
+    bgColor = 'rgba(186, 117, 23, 0.16)';
+    textColor = '#F0B45F';
+    borderColor = 'rgba(186, 117, 23, 0.34)';
   }
 
   return (
