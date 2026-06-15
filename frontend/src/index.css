@@ -192,6 +192,54 @@ button.primary:disabled {
   line-height: 1.35;
 }
 
+.signal-selector {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.signal-selector-card {
+  min-height: 116px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: #FCFAFA;
+  color: #111827;
+  padding: 13px;
+  text-align: left;
+  transition: transform 0.2s, border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.signal-selector-card:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: rgba(245, 101, 101, 0.36);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.signal-selector-card.selected {
+  border-color: #FF7F50;
+  background: linear-gradient(135deg, rgba(245, 101, 101, 0.06), #FFFFFF);
+  box-shadow: 0 4px 14px rgba(245, 101, 101, 0.1);
+}
+
+.signal-selector-card i {
+  color: #FF7F50;
+  font-size: 20px;
+}
+
+.signal-selector-card span {
+  font-weight: 700;
+}
+
+.signal-selector-card small {
+  color: #6B7280;
+  line-height: 1.35;
+}
+
 .monitor-form label {
   color: #111827;
   font-size: 0.875rem;
