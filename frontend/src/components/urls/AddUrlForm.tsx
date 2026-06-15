@@ -12,6 +12,7 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
   const [url, setUrl] = useState('');
   const [selectedSignals, setSelectedSignals] = useState<CheckType[]>(['HTTP']);
   const [keyword, setKeyword] = useState('');
+  const [checkInterval, setCheckInterval] = useState(60);
   const [showSignalOptions, setShowSignalOptions] = useState(false);
   const [touchedName, setTouchedName] = useState(false);
   const [touchedUrl, setTouchedUrl] = useState(false);
@@ -70,6 +71,7 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
         web_address: url.trim(),
         check_type: selectedSignals.join(','),
         keyword_to_find: selectedSignals.includes('KEYWORD') ? keyword.trim() : undefined,
+        check_interval_seconds: checkInterval,
       });
     } catch {
       return;
@@ -79,6 +81,7 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
     setUrl('');
     setKeyword('');
     setSelectedSignals(['HTTP']);
+    setCheckInterval(60);
     setShowSignalOptions(false);
     setTouchedName(false);
     setTouchedUrl(false);
@@ -165,6 +168,31 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
               {keywordError && touchedKeyword && <div className="field-error">{keywordError}</div>}
             </div>
           )}
+
+          <div className="keyword-field" style={{ marginTop: 16 }}>
+            <label htmlFor="check-interval">Ping frequency</label>
+            <select
+              id="check-interval"
+              value={checkInterval}
+              onChange={(e) => setCheckInterval(Number(e.target.value))}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid rgba(0,0,0,0.1)',
+                background: '#FFFFFF',
+                color: '#111827',
+                fontSize: '0.875rem'
+              }}
+            >
+              <option value={30}>Every 30 seconds</option>
+              <option value={60}>Every 1 minute</option>
+              <option value={300}>Every 5 minutes</option>
+              <option value={1800}>Every 30 minutes</option>
+              <option value={3600}>Every 1 hour</option>
+              <option value={86400}>Every 1 day</option>
+              <option value={259200}>Every 3 days</option>
+            </select>
+          </div>
         </div>
       )}
     </form>

@@ -149,8 +149,14 @@ export function UrlCard({ url, onDelete, onInspect, extraData, lastPing }: UrlCa
         <StatusDot status={url.status} />
       </div>
       <div className={styles.address}>
-        <div style={{ marginBottom: 8 }}>{url.web_address}</div>
-        <Badge variant={getBadgeVariant(url.status)} label={url.status} />
+        <div className={styles.addressRow}>
+          <span className={styles.label}>URL :</span>
+          <span>{url.web_address}</span>
+        </div>
+        <div className={styles.addressRow} style={{ marginTop: 4 }}>
+          <span className={styles.label}>Status :</span>
+          <Badge variant={getBadgeVariant(url.status)} label={url.status} />
+        </div>
         {signalLines.map((signalLine) => (
           <div key={signalLine.text} style={{ fontSize: 11, marginTop: 4, color: signalLine.color }}>
             {signalLine.text}
