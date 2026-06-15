@@ -16,7 +16,7 @@ export function TopBar({ isConnected, connectionError }: TopBarProps) {
             height: 10,
             borderRadius: '50%',
             border: '2px solid transparent',
-            borderTopColor: '#BA7517',
+            borderTopColor: '#FF7F50',
             display: 'inline-block',
             animation: 'spin 0.8s linear infinite',
             boxSizing: 'border-box',
@@ -42,14 +42,14 @@ export function TopBar({ isConnected, connectionError }: TopBarProps) {
     <header
       style={{
         height: 56,
-        backgroundColor: 'rgba(9, 10, 13, 0.96)',
-        borderBottom: '1px solid rgba(198, 161, 91, 0.2)',
+        backgroundColor: 'rgba(255, 255, 255, 0.96)',
+        borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
         display: 'flex',
         alignItems: 'center',
         padding: '0 24px',
         justifyContent: 'space-between',
-        color: '#F7F0E4',
-        boxShadow: '0 16px 50px rgba(0, 0, 0, 0.28)',
+        color: '#111827',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
       }}
     >
       <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
@@ -67,9 +67,9 @@ export function TopBar({ isConnected, connectionError }: TopBarProps) {
             onClick={() => window.location.reload()}
             style={{
               marginLeft: 4,
-              border: '1px solid rgba(198, 161, 91, 0.35)',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              color: '#F7F0E4',
+              border: '1px solid rgba(245, 101, 101, 0.35)',
+              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              color: '#111827',
               borderRadius: 4,
               padding: '3px 8px',
               fontSize: 12,

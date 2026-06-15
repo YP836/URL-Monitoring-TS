@@ -30,8 +30,8 @@ export function Dashboard() {
   const renderEmptyState = () => (
     <div className="center-state">
       <RadarIcon size={48} color="#C6A15B" />
-      <div style={{ fontSize: 18, fontWeight: 500, color: '#F7F0E4' }}>No URLs monitored yet</div>
-      <div style={{ fontSize: 14, color: '#A9A195' }}>Use Add link to begin monitoring a new site</div>
+      <div style={{ fontSize: 18, fontWeight: 500, color: '#111827' }}>No URLs monitored yet</div>
+      <div style={{ fontSize: 14, color: '#6B7280' }}>Use Add link to begin monitoring a new site</div>
     </div>
   );
 
@@ -39,7 +39,7 @@ export function Dashboard() {
     <div className="center-state">
       <div className="state-card">
         <div style={{ fontSize: 16, color: '#E24B4A', fontWeight: 500 }}>Failed to load URLs</div>
-        <div style={{ fontSize: 13, color: '#A9A195', marginTop: 6 }}>{error}</div>
+        <div style={{ fontSize: 13, color: '#6B7280', marginTop: 6 }}>{error}</div>
         <button type="button" className="primary" style={{ marginTop: 14 }} onClick={retryFetch}>
           Retry
         </button>

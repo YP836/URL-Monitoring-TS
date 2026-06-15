@@ -23,13 +23,13 @@ export function Sidebar({ urlCount }: SidebarProps) {
       className="sidebar"
       style={{
         width: 200,
-        borderRight: '1px solid rgba(198, 161, 91, 0.18)',
-        backgroundColor: 'rgba(10, 11, 14, 0.92)',
+        borderRight: '1px solid rgba(0, 0, 0, 0.05)',
+        backgroundColor: 'rgba(255, 255, 255, 0.92)',
         padding: '24px 16px',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: 'inset -1px 0 0 rgba(255, 255, 255, 0.04)',
+        boxShadow: 'inset -1px 0 0 rgba(0, 0, 0, 0.04)',
       }}
     >
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -37,9 +37,9 @@ export function Sidebar({ urlCount }: SidebarProps) {
           to="/dashboard"
           style={{
             ...navStyle,
-            color: isDashboard ? '#F7F0E4' : '#A9A195',
-            backgroundColor: isDashboard ? 'rgba(198, 161, 91, 0.15)' : 'transparent',
-            borderLeftColor: isDashboard ? '#C6A15B' : 'transparent',
+            color: isDashboard ? '#111827' : '#6B7280',
+            backgroundColor: isDashboard ? 'rgba(245, 101, 101, 0.1)' : 'transparent',
+            borderLeftColor: isDashboard ? '#FF7F50' : 'transparent',
           }}
         >
           <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
@@ -49,8 +49,8 @@ export function Sidebar({ urlCount }: SidebarProps) {
                 minWidth: 20,
                 height: 20,
                 borderRadius: 10,
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                color: '#F7F0E4',
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                color: '#111827',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -68,12 +68,12 @@ export function Sidebar({ urlCount }: SidebarProps) {
           href={`${import.meta.env.VITE_API_BASE_URL}/docs`}
           target="_blank"
           rel="noreferrer"
-          style={{ color: '#A9A195', fontSize: 13, display: 'inline-flex', gap: 8 }}
+          style={{ color: '#6B7280', fontSize: 13, display: 'inline-flex', gap: 8 }}
         >
           <BookIcon size={15} />
           Docs
         </a>
-        <div style={{ color: '#6F685E', fontSize: 12 }}>v0.1.0</div>
+        <div style={{ color: '#9CA3AF', fontSize: 12 }}>v0.1.0</div>
       </div>
     </aside>
   );

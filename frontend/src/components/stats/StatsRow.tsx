@@ -54,25 +54,25 @@ export function StatsRow({
   const lastChecked = sortedPings.length > 0 ? timeAgo(sortedPings[0].checked_at) : 'Never';
 
   const cardStyle = {
-    backgroundColor: 'rgba(255, 255, 255, 0.055)',
-    border: '1px solid rgba(198, 161, 91, 0.2)',
+    backgroundColor: '#FFFFFF',
+    border: '1px solid rgba(0, 0, 0, 0.05)',
     borderRadius: 8,
     padding: '12px 16px',
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 4,
-    boxShadow: '0 18px 50px rgba(0, 0, 0, 0.2)',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
   };
 
   const labelStyle = {
     fontSize: 12,
-    color: '#A9A195',
+    color: '#6B7280',
   };
 
   const valueStyle = {
     fontSize: 20,
     fontWeight: 500,
-    color: '#F7F0E4',
+    color: '#111827',
   };
 
   const cards: Array<{ key: MetricKey; label: string; value: string }> = [

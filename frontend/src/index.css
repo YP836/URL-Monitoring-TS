@@ -12,14 +12,14 @@ body,
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 15px;
-  color: #F7F0E4;
-  background: #090A0D;
+  color: #111827;
+  background: #FCFCFC;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 a {
-  color: #D9C99F;
+  color: #FF7F50;
   text-decoration: none;
 }
 
@@ -34,39 +34,40 @@ button {
 
 input {
   font-family: inherit;
-  padding: 8px 12px;
-  border: 1px solid rgba(198, 161, 91, 0.28);
-  border-radius: 6px;
+  padding: 8px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 999px;
   font-size: 0.875rem;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-  background: rgba(255, 255, 255, 0.08);
-  color: #F7F0E4;
+  background: #FFFFFF;
+  color: #111827;
 }
 
 input::placeholder {
-  color: #7E766B;
+  color: #9CA3AF;
 }
 
 input:focus {
-  border-color: #C6A15B;
-  box-shadow: 0 0 0 3px rgba(198, 161, 91, 0.14);
+  border-color: #FF7F50;
+  box-shadow: 0 0 0 3px rgba(255, 127, 80, 0.14);
 }
 
 button.primary {
-  background: linear-gradient(135deg, #D9C99F, #A77F38);
-  color: #111216;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 6px;
-  padding: 8px 16px;
+  background: linear-gradient(135deg, #F56565, #FF7F50);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 20px;
   font-size: 0.875rem;
   font-weight: 700;
+  box-shadow: 0 4px 14px rgba(245, 101, 101, 0.25);
   transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
 }
 
 button.primary:hover:not(:disabled) {
-  transform: translateY(-1px) scale(1.06);
-  box-shadow: 0 10px 24px rgba(198, 161, 91, 0.26);
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 8px 24px rgba(245, 101, 101, 0.35);
   filter: saturate(1.08);
 }
 
@@ -75,8 +76,9 @@ button.primary:active:not(:disabled) {
 }
 
 button.primary:disabled {
-  background: rgba(255, 255, 255, 0.16);
-  color: #777;
+  background: rgba(0, 0, 0, 0.06);
+  color: #9CA3AF;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
@@ -84,26 +86,28 @@ button.primary:disabled {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid rgba(198, 161, 91, 0.28);
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 6px;
-  padding: 5px 10px;
-  font-size: 12px;
-  color: #F7F0E4;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #FFFFFF;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4B5563;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
   transition: transform 0.2s, border-color 0.2s, background 0.2s;
 }
 
 .outline-button:hover {
-  transform: scale(1.05);
-  border-color: rgba(232, 214, 168, 0.58);
-  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.03);
+  border-color: rgba(245, 101, 101, 0.3);
+  background: #FCFAFA;
 }
 
 .link-button {
   background: none;
-  border: none;
-  color: #D9C99F;
-  margin-bottom: 24px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 12px;
   font-size: 14px;
   padding: 0;
 }
@@ -116,15 +120,16 @@ button.primary:disabled {
   justify-content: center;
   gap: 10px;
   text-align: center;
-  color: #A9A195;
+  color: #6B7280;
 }
 
 .state-card {
-  border: 1px solid rgba(198, 161, 91, 0.24);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.055);
+  background: #FFFFFF;
   padding: 24px;
   min-width: 280px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
 .monitor-form {
@@ -132,16 +137,15 @@ button.primary:disabled {
   gap: 16px;
   align-items: flex-start;
   padding: 24px;
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px solid rgba(198, 161, 91, 0.24);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 8px;
   margin-bottom: 24px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(18px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
 }
 
 .monitor-form label {
-  color: #F7F0E4;
+  color: #111827;
   font-size: 0.875rem;
   font-weight: 500;
 }
@@ -152,18 +156,18 @@ button.primary:disabled {
 }
 
 .console-panel {
-  border: 1px solid rgba(198, 161, 91, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.045);
+  background: #FFFFFF;
   padding: 18px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
 
 .premium-table {
   overflow: hidden;
-  border: 1px solid rgba(198, 161, 91, 0.18);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 8px;
-  color: #EDE5D6;
+  color: #374151;
 }
 
 .dashboard-head {
@@ -180,22 +184,20 @@ button.primary:disabled {
 
 .add-link-button {
   min-height: 38px;
-  border: 1px solid rgba(198, 161, 91, 0.42);
+  border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  color: #F7F0E4;
+  background: linear-gradient(135deg, #F56565, #FF7F50);
+  color: #FFFFFF;
   padding: 0 18px;
   font-size: 13px;
   font-weight: 700;
-  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.22);
-  transition: transform 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 14px rgba(245, 101, 101, 0.25);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .add-link-button:hover {
-  transform: scale(1.08);
-  border-color: rgba(232, 214, 168, 0.68);
-  background: rgba(198, 161, 91, 0.18);
-  box-shadow: 0 22px 52px rgba(198, 161, 91, 0.15);
+  transform: scale(1.04);
+  box-shadow: 0 8px 24px rgba(245, 101, 101, 0.35);
 }
 
 .add-link-button:active {
@@ -207,22 +209,21 @@ button.primary:disabled {
   grid-template-columns: minmax(220px, 0.45fr) minmax(320px, 1fr);
   gap: 18px;
   align-items: stretch;
-  border: 1px solid rgba(198, 161, 91, 0.22);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025)),
-    #101116;
+  background: #FFFFFF;
   padding: 18px;
   margin-bottom: 24px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
 
 .metric-chooser h2 {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: clamp(1.35rem, 2.4vw, 2.2rem);
-  font-weight: 400;
-  letter-spacing: 0;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.02em;
 }
 
 .metric-options {
@@ -237,10 +238,10 @@ button.primary:disabled {
   flex-direction: column;
   justify-content: space-between;
   gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.055);
-  color: #F7F0E4;
+  background: #FCFAFA;
+  color: #111827;
   padding: 14px;
   text-align: left;
   transition: transform 0.2s, border-color 0.2s, background 0.2s, box-shadow 0.2s;
@@ -248,13 +249,14 @@ button.primary:disabled {
 
 .metric-option:hover {
   transform: translateY(-2px) scale(1.04);
-  border-color: rgba(232, 214, 168, 0.6);
-  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.24);
+  border-color: rgba(245, 101, 101, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
 .metric-option.selected {
-  border-color: rgba(198, 161, 91, 0.74);
-  background: linear-gradient(135deg, rgba(198, 161, 91, 0.2), rgba(255, 255, 255, 0.065));
+  border-color: #FF7F50;
+  background: linear-gradient(135deg, rgba(245, 101, 101, 0.05), #FFFFFF);
+  box-shadow: 0 4px 14px rgba(245, 101, 101, 0.1);
 }
 
 .metric-option span {
@@ -262,7 +264,7 @@ button.primary:disabled {
 }
 
 .metric-option small {
-  color: #A9A195;
+  color: #6B7280;
   line-height: 1.35;
 }
 
@@ -694,10 +696,10 @@ button.primary:disabled {
   max-width: 480px;
   margin: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: 0;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.02em;
 }
 
 .signal-grid {
@@ -726,8 +728,8 @@ button.primary:disabled {
 .signal-tile strong {
   font-family: Georgia, "Times New Roman", serif;
   font-size: 38px;
-  font-weight: 400;
-  color: #111216;
+  font-weight: 600;
+  color: #111827;
 }
 
 .signal-green {

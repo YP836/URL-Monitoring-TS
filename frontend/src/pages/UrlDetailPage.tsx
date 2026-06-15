@@ -93,7 +93,7 @@ export function UrlDetailPage() {
               <h1 style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 28, fontWeight: 400 }}>
                 {url.name}
               </h1>
-              <span style={{ fontSize: 13, color: '#A9A195' }}>Checked {livePings.length} times</span>
+              <span style={{ fontSize: 13, color: '#6B7280' }}>Checked {livePings.length} times</span>
               <button className="outline-button" type="button" onClick={handleCheckNow}>
                 <RefreshIcon className={isChecking ? 'spin-icon' : undefined} size={14} />
                 Check now
@@ -132,7 +132,7 @@ function CenteredMessage({ title, detail }: { title: string; detail?: string }) 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section style={{ marginBottom: 40 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: '#F7F0E4' }}>{title}</h2>
+      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: '#111827' }}>{title}</h2>
       <div className="console-panel">{children}</div>
     </section>
   );
@@ -140,7 +140,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function RecentChecks({ pings }: { pings: PingHistoryRead[] }) {
   return (
     <section>
-      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: '#F7F0E4' }}>Recent checks</h2>
+      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: '#111827' }}>Recent checks</h2>
       <table className="premium-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <tbody>
           {pings.slice(0, 20).map((ping, index) => (

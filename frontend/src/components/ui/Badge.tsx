@@ -7,7 +7,7 @@ interface BadgeProps {
 
 export function Badge({ label, variant }: BadgeProps) {
   let bgColor = 'rgba(255, 255, 255, 0.09)';
-  let textColor = '#F7F0E4';
+  let textColor = '#111827';
   let borderColor = 'rgba(255, 255, 255, 0.12)';
 
   if (variant === 'success') {

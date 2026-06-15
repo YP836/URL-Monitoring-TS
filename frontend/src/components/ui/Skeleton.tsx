@@ -20,7 +20,7 @@ export function Skeleton({
             50% { opacity: 0.4; }
           }
           .skeleton-block {
-            background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(198,161,91,0.12), rgba(255,255,255,0.06));
+            background: linear-gradient(90deg, rgba(0,0,0,0.02), rgba(0,0,0,0.06), rgba(0,0,0,0.02));
             animation: skeleton-pulse 1.5s ease-in-out infinite;
           }
         `}
@@ -42,7 +42,7 @@ export function UrlCardSkeleton() {
         width: '100%',
         borderRadius: 8,
         border: '1px solid rgba(198, 161, 91, 0.2)',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: 'rgba(0, 0, 0, 0.04)',
         padding: 16,
       }}
     >
@@ -64,7 +64,7 @@ export function StatCardSkeleton() {
       style={{
         height: 80,
         borderRadius: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.055)',
+        backgroundColor: 'rgba(0, 0, 0, 0.04)',
         padding: 16,
       }}
     >

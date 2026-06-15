@@ -23,7 +23,7 @@ export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
 
   if (pings.length === 0) {
     return (
-      <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A9A195' }}>
+      <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280' }}>
         No ping history yet
       </div>
     );
@@ -49,11 +49,12 @@ export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
       return (
         <div
           style={{
-            backgroundColor: '#121316',
-            border: '1px solid rgba(198, 161, 91, 0.28)',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
             borderRadius: 8,
             padding: 10,
-            color: '#F7F0E4',
+            color: '#111827',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
           }}
         >
           {point.timeLabel} &middot; {latencyText} &middot; {point.status}
@@ -67,14 +68,14 @@ export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
     <div style={{ width: '100%', height }}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-          <XAxis dataKey="timeLabel" tick={{ fontSize: 12, fill: '#A9A195' }} axisLine={false} tickLine={false} />
-          <YAxis dataKey="latency" domain={[0, 'auto']} tick={{ fontSize: 12, fill: '#A9A195' }} axisLine={false} tickLine={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+          <XAxis dataKey="timeLabel" tick={{ fontSize: 12, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+          <YAxis dataKey="latency" domain={[0, 'auto']} tick={{ fontSize: 12, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
           <Tooltip content={<CustomTooltip />} />
           
           {data.map((entry, index) => 
             !entry.isUp ? (
-              <ReferenceLine key={`ref-${index}`} x={entry.timeLabel} stroke="#E24B4A" strokeDasharray="3 3" />
+              <ReferenceLine key={`ref-${index}`} x={entry.timeLabel} stroke="#F56565" strokeDasharray="3 3" />
             ) : null
           )}
 

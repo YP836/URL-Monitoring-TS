@@ -71,8 +71,8 @@ export function UptimeBar({ pings }: UptimeBarProps) {
   const overallUptime = totalPings === 0 ? null : ((upPings / totalPings) * 100).toFixed(1);
 
   const getBucketColor = (bucket: DayBucket) => {
-    if (!bucket.hasData) return 'rgba(255, 255, 255, 0.14)';
-    if (bucket.hasAnyDown) return '#E24B4A';
+    if (!bucket.hasData) return 'rgba(0, 0, 0, 0.05)';
+    if (bucket.hasAnyDown) return '#F56565';
     return '#1D9E75';
   };
 
@@ -106,9 +106,9 @@ export function UptimeBar({ pings }: UptimeBarProps) {
             bottom: 36,
             left: '50%',
             transform: 'translateX(-50%)',
-            backgroundColor: '#121316',
-            color: '#F7F0E4',
-            border: '1px solid rgba(198, 161, 91, 0.28)',
+            backgroundColor: '#FCFAFA',
+            color: '#111827',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
             padding: '4px 8px',
             borderRadius: 4,
             fontSize: 12,
@@ -121,9 +121,9 @@ export function UptimeBar({ pings }: UptimeBarProps) {
         )}
       </div>
       
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12, color: '#A9A195' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12, color: '#6B7280' }}>
         <span>90 days ago</span>
-        <span style={{ fontWeight: 500, color: '#F7F0E4' }}>
+        <span style={{ fontWeight: 500, color: '#111827' }}>
           {overallUptime !== null ? `${overallUptime}% uptime` : 'No data yet'}
         </span>
         <span>Today</span>

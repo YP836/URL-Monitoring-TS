@@ -1,66 +1,68 @@
 .card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.035));
-  border: 1px solid rgba(198, 161, 91, 0.22);
+  background: #FFFFFF;
   border-radius: 8px;
   padding: 16px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(14px);
   transition: border-color 0.6s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.card:hover {
-  border-color: rgba(232, 199, 127, 0.58);
+.card.highlight {
+  border-color: rgba(245, 101, 101, 0.58);
+  box-shadow: 0 0 20px rgba(245, 101, 101, 0.15);
   transform: translateY(-2px);
-  box-shadow: 0 26px 72px rgba(0, 0, 0, 0.34);
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+.card.up {
+  border-left: 4px solid #1D9E75;
+}
+
+.card.down {
+  border-left: 4px solid #F56565;
 }
 
 .name {
-  font-weight: bold;
-  font-size: 1.125rem;
-  color: #F7F0E4;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #111827;
+  margin-bottom: 4px;
 }
 
-.address {
-  font-size: 0.875rem;
-  color: #A9A195;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.url {
+  font-size: 0.85rem;
+  color: #6B7280;
+  margin-bottom: 12px;
+  word-break: break-all;
 }
 
-.footer {
+.meta {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   margin-top: auto;
 }
 
-.time {
+.date {
   font-size: 0.75rem;
-  color: #8F877B;
+  color: #9CA3AF;
 }
 
 .deleteBtn {
   background: transparent;
-  border: 1px solid rgba(226, 75, 74, 0.35);
-  color: #FF8D84;
-  border-radius: 6px;
-  padding: 4px 8px;
+  border: 1px solid rgba(245, 101, 101, 0.3);
+  color: #F56565;
+  border-radius: 999px;
+  padding: 4px 10px;
   font-size: 0.75rem;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .deleteBtn:hover {
-  background-color: rgba(226, 75, 74, 0.12);
-  border-color: rgba(226, 75, 74, 0.55);
+  background-color: #F56565;
+  color: #FFFFFF;
 }
