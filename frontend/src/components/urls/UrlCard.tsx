@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckType, PingResult, URLItem } from '../../types';
 import { StatusDot } from '../ui/StatusDot';
 import { Badge } from '../ui/Badge';
@@ -193,7 +194,7 @@ export function UrlCard({ url, onDelete, onInspect, extraData, lastPing }: UrlCa
         </div>
       </div>
 
-      {isConfirming && (
+      {isConfirming && createPortal(
         <div className={styles.modalOverlay} onClick={handleCancelDelete} role="presentation">
           <div
             className={styles.confirmDialog}
@@ -216,7 +217,8 @@ export function UrlCard({ url, onDelete, onInspect, extraData, lastPing }: UrlCa
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
