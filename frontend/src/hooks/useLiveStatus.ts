@@ -12,10 +12,22 @@ export function useLiveStatus(urls: URLItem[], lastMessage: PingResult | null): 
   useEffect(() => {
     if (!lastMessage) return;
 
-    setLastPingMap(previous => ({
-      ...previous,
-      [lastMessage.url_id]: lastMessage,
-    }));
+    setLastPingMap(previous => {
+      const prevPing = previous[lastMessage.url_id];
+      if (lastMessage.check_type !== 'HTTP' && prevPing && prevPing.latency_ms !== null) {
+        return {
+          ...previous,
+          [lastMessage.url_id]: {
+            ...lastMessage,
+            latency_ms: prevPing.latency_ms,
+          },
+        };
+      }
+      return {
+        ...previous,
+        [lastMessage.url_id]: lastMessage,
+      };
+    });
   }, [lastMessage]);
 
   const liveUrls = useMemo(() => {

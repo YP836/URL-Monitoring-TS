@@ -78,7 +78,7 @@ export function Dashboard() {
   const renderEmptyState = () => (
     <div className="center-state">
       <RadarIcon size={48} color="#C6A15B" />
-      <div style={{ fontSize: 18, fontWeight: 500, color: '#F7F0E4' }}>No URLs monitored yet</div>
+      <div style={{ fontSize: 18, fontWeight: 500, color: '#6B7280' }}>No URLs monitored yet</div>
       <div style={{ fontSize: 14, color: '#A9A195' }}>Add a site above to begin monitoring it</div>
     </div>
   );

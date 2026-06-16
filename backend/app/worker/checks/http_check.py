@@ -18,7 +18,7 @@ def run_http_check(url_id: int, web_address: str) -> CheckResult:
         with httpx.Client(
             timeout=timeout,
             follow_redirects=True,
-            headers={"User-Agent": "UptimeMonitor/1.0"},
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"},
         ) as client:
             response = client.get(web_address)
         response_time_ms = int((time.monotonic() - start) * 1000)
@@ -28,12 +28,11 @@ def run_http_check(url_id: int, web_address: str) -> CheckResult:
         httpx.TimeoutException,
         httpx.ConnectError,
         httpx.TooManyRedirects,
+        httpx.HTTPError,
     ):
         response_time_ms = None
         status_code = None
         is_up = False
-    except httpx.HTTPError:
-        raise
 
     return CheckResult(
         url_id=url_id,

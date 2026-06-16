@@ -95,7 +95,7 @@ export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
             stroke="#1D9E75" 
             strokeWidth={2} 
             dot={false} 
-            connectNulls={false}
+            connectNulls={true}
             isAnimationActive={true}
             animationDuration={400}
           />

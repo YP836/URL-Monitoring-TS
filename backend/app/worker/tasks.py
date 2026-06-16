@@ -210,8 +210,12 @@ def schedule_ping_tasks() -> dict:
         web_address = row["web_address"] if isinstance(row, dict) else row[1]
         check_type = row["check_type"] if isinstance(row, dict) else row[2]
         keyword = row["keyword_to_find"] if isinstance(row, dict) else row[3]
-        for selected_check_type in _split_check_types(check_type):
-            ping_url.apply_async(args=[url_id, web_address, selected_check_type, keyword], expires=25)
+        for i, selected_check_type in enumerate(_split_check_types(check_type)):
+            ping_url.apply_async(
+                args=[url_id, web_address, selected_check_type, keyword], 
+                expires=25,
+                countdown=i * 2
+            )
             count += 1
 
     logger.info("[schedule_ping_tasks] Enqueued %s ping tasks", count)
