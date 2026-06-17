@@ -67,7 +67,7 @@ function computeAvgLatency(pings: PingHistoryRead[]): string {
 
 function computeP95Latency(pings: PingHistoryRead[]): string {
   const upPings = pings.filter((ping) => ping.is_up && ping.response_time_ms !== null);
-  if (upPings.length < 5) return '-';
+  if (upPings.length === 0) return '-';
 
   const times = upPings.map((ping) => ping.response_time_ms ?? 0).sort((a, b) => a - b);
   const idx = Math.ceil(0.95 * times.length) - 1;

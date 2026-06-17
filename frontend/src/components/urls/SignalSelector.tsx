@@ -44,9 +44,18 @@ export function SignalSelector({ selectedSignals, onChange }: SignalSelectorProp
             aria-pressed={isSelected}
             onClick={() => toggleSignal(option.key)}
           >
-            <i className={`ti ${option.icon}`} aria-hidden="true" />
-            <span>{option.title}</span>
-            <small>{option.detail}</small>
+            <div className="signal-card-top">
+              <div className="signal-icon-wrapper">
+                <i className={`ti ${option.icon}`} aria-hidden="true" />
+              </div>
+              <div className="signal-checkbox">
+                {isSelected && <i className="ti ti-check" />}
+              </div>
+            </div>
+            <div className="signal-card-bottom">
+              <span>{option.title}</span>
+              <small>{option.detail}</small>
+            </div>
           </button>
         );
       })}

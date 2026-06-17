@@ -215,18 +215,6 @@ export function UrlCard({ url, onDelete, onInspect, extraData, lastPing }: UrlCa
             <span className={styles.label}>Status:</span>
             <Badge variant={getBadgeVariant(url.status)} label={url.status} />
           </div>
-          {signalLines.map((signalLine, index) => (
-            <motion.div
-              key={signalLine.text}
-              className={styles.signalLine}
-              style={{ color: signalLine.color }}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.24, delay: 0.08 + index * 0.04 }}
-            >
-              {signalLine.text}
-            </motion.div>
-          ))}
         </div>
 
         <div className={styles.footer}>
