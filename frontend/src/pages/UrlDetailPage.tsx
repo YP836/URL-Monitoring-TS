@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { checkUrlNow, getUrlDetail, getUrlExtraData } from '../api/client';
 import { CheckType, PingHistoryRead, URLDetail } from '../types';
 import { PageLayout } from '../components/layout/PageLayout';
 import { Toast } from '../components/ui/Toast';
 import { StatusDot } from '../components/ui/StatusDot';
-import { RefreshIcon } from '../components/ui/Icons';
+import { DownloadIcon, RefreshIcon } from '../components/ui/Icons';
 import { ChartSkeleton, Skeleton, StatCardSkeleton } from '../components/ui/Skeleton';
 import { MetricKey } from '../components/stats/MetricChooser';
 import { StatsRow } from '../components/stats/StatsRow';
 import { UptimeBar } from '../components/charts/UptimeBar';
 import { LatencyChart } from '../components/charts/LatencyChart';
+import { MonitorReportModal } from '../components/reports/MonitorReportModal';
 import { buildWsUrl, useWebSocket } from '../hooks/useWebSocket';
 function timeAgo(isoString: string): string {
   const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
@@ -57,6 +59,7 @@ export function UrlDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [extraData, setExtraData] = useState<Record<string, unknown> | null>(null);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const { lastMessage, isConnected, connectionError } = useWebSocket(buildWsUrl(import.meta.env.VITE_API_BASE_URL));
 
   useEffect(() => {
@@ -142,26 +145,47 @@ export function UrlDetailPage() {
       {!isLoading && error && !showNotFound && <CenteredMessage title="Failed to load URL details" detail={error} />}
       {!isLoading && url && (
         <>
-          <header style={{ marginBottom: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <StatusDot status={currentStatus} />
-              <h1 style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 28, fontWeight: 400 }}>
-                {url.name}
-              </h1>
-              <span style={{ fontSize: 13, color: '#6B7280' }}>Checked {livePings.length} times</span>
+          <header className="detail-page-header">
+            <div className="detail-title-block">
+              <div className="detail-title-row">
+                <StatusDot status={currentStatus} />
+                <h1>
+                  {url.name}
+                </h1>
+                <span>Checked {livePings.length} times</span>
+              </div>
+              <a href={url.web_address} target="_blank" rel="noopener noreferrer">
+                {url.web_address}
+              </a>
+            </div>
+            <div className="detail-actions">
               <button className="outline-button" type="button" onClick={handleCheckNow}>
                 <RefreshIcon className={isChecking ? 'spin-icon' : undefined} size={14} />
                 Check now
               </button>
+              <button className="primary save-report-button" type="button" onClick={() => setIsReportOpen(true)}>
+                <DownloadIcon size={14} />
+                Save
+              </button>
             </div>
-            <a href={url.web_address} target="_blank" rel="noopener noreferrer" style={{ color: '#D9C99F', fontSize: 14 }}>
-              {url.web_address}
-            </a>
           </header>
           <StatsRow pings={livePings} visibleMetrics={visibleMetrics} extraData={extraData} />
           {showUptimeChart && <Section title="Uptime - last 90 days"><UptimeBar pings={livePings} /></Section>}
           {showLatencyChart && <Section title="Response time - last 50 pings"><LatencyChart pings={livePings} /></Section>}
           <RecentChecks pings={livePings} />
+          <AnimatePresence>
+            {isReportOpen && (
+              <MonitorReportModal
+                url={url}
+                pings={livePings}
+                currentStatus={currentStatus}
+                extraData={extraData}
+                showUptimeChart={showUptimeChart}
+                showLatencyChart={showLatencyChart}
+                onClose={() => setIsReportOpen(false)}
+              />
+            )}
+          </AnimatePresence>
         </>
       )}
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}

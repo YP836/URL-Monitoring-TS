@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
 const signalTiles = [
@@ -10,6 +11,7 @@ const signalTiles = [
 export function LandingPage() {
   const [isLoadingIntro, setIsLoadingIntro] = useState(true);
   const [introProgress, setIntroProgress] = useState(0);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     document.title = 'Signal Ascendant - Uptime Monitor';
@@ -44,53 +46,106 @@ export function LandingPage() {
   }, []);
 
   const welcomeOpacity = Math.max(0.12, 1 - introProgress * 0.86);
-  const welcomeScale = 1 - introProgress * 0.08;
-  const welcomeShift = introProgress * -110;
-  const contentLift = introProgress * 42;
+  const welcomeScale = prefersReducedMotion ? 1 : 1 - introProgress * 0.08;
+  const welcomeShift = prefersReducedMotion ? 0 : introProgress * -110;
+  const contentLift = prefersReducedMotion ? 0 : introProgress * 42;
+  const motionTransition = { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const };
 
   return (
     <main className={`landing-page${isLoadingIntro ? ' intro-loading' : ' intro-ready'}`}>
-      {isLoadingIntro && (
-        <div className="landing-loader" role="status" aria-live="polite" aria-label="Loading Signal Ascendant">
-          <div className="loader-orbit" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-          <div className="loader-copy">
-            <span>Calibrating signals</span>
-            <strong>Signal Ascendant</strong>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {isLoadingIntro && (
+          <motion.div
+            className="landing-loader"
+            role="status"
+            aria-live="polite"
+            aria-label="Loading Signal Ascendant"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.02, filter: 'blur(10px)' }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <motion.div
+              className="loader-orbit"
+              aria-hidden="true"
+              animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+              transition={{ duration: 6, ease: 'linear', repeat: Infinity }}
+            >
+              <span />
+              <span />
+              <span />
+            </motion.div>
+            <motion.div
+              className="loader-copy"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12, duration: 0.45 }}
+            >
+              <span>Calibrating signals</span>
+              <strong>Signal Ascendant</strong>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <section
+      <motion.section
         className="welcome-stage"
         aria-label="Welcome"
-        style={{
+        initial={{ opacity: 0, y: 24, scale: 0.98, filter: 'blur(10px)' }}
+        animate={{
           opacity: welcomeOpacity,
-          transform: `translateY(${welcomeShift}px) scale(${welcomeScale})`,
+          y: welcomeShift,
+          scale: welcomeScale,
+          filter: introProgress > 0.72 && !prefersReducedMotion ? 'blur(8px)' : 'blur(0px)',
         }}
+        transition={motionTransition}
       >
         <div className="welcome-grid" aria-hidden="true" />
-        <div className="welcome-mark">UPTIME.9</div>
-        <div className="welcome-copy">
+        <motion.div
+          className="welcome-mark"
+          initial={{ opacity: 0, x: -14 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 2.05, duration: 0.45 }}
+        >
+          UPTIME.9
+        </motion.div>
+        <motion.div
+          className="welcome-copy"
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2.08, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        >
           <p className="landing-kicker">The art of precision</p>
           <h1>WELCOME</h1>
           <span>Scroll to enter the command room</span>
-        </div>
-        <div className="scroll-cue" aria-hidden="true">
+        </motion.div>
+        <motion.div
+          className="scroll-cue"
+          aria-hidden="true"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: introProgress > 0.18 ? 0 : 1, y: 0 }}
+          transition={{ delay: 2.4, duration: 0.45 }}
+        >
           <span />
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
 
-      <div
+      <motion.div
         className="landing-content-reveal"
-        style={{
-          transform: `translateY(-${contentLift}vh)`,
+        initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 80 }}
+        animate={{
+          opacity: isLoadingIntro ? 0 : 1,
+          y: isLoadingIntro ? 80 : `-${contentLift}vh`,
         }}
+        transition={motionTransition}
       >
-        <nav className="landing-nav" aria-label="Primary">
+        <motion.nav
+          className="landing-nav"
+          aria-label="Primary"
+          initial={{ opacity: 0, y: -18 }}
+          animate={{ opacity: isLoadingIntro ? 0 : 1, y: isLoadingIntro ? -18 : 0 }}
+          transition={{ delay: 0.1, duration: 0.45 }}
+        >
           <Link className="brand-mark" to="/">
             <span className="brand-glyph">U</span>
             <span>Uptime Monitor</span>
@@ -100,10 +155,16 @@ export function LandingPage() {
             <a href="#precision">Precision</a>
             <Link to="/launch">Console</Link>
           </div>
-        </nav>
+        </motion.nav>
 
         <section className="landing-hero" aria-labelledby="landing-title">
-          <div className="hero-panel-map">
+          <motion.div
+            className="hero-panel-map"
+            initial={{ opacity: 0, x: 36, scale: 0.985 }}
+            whileInView={{ opacity: 1, x: 0, scale: 1 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          >
             <div className="map-header">GEO-SPECIFIC STATUS</div>
 
             <div className="map-layer">
@@ -119,26 +180,26 @@ export function LandingPage() {
               </svg>
             </div>
 
-            <div className="map-pin pin-lhr">
+            <motion.div className="map-pin pin-lhr" whileHover={{ y: -4, scale: 1.04 }}>
               <span className="pin-dot" />
               <div className="pin-label"><strong>LHR</strong><br />Lat 12ms | Ok</div>
-            </div>
-            <div className="map-pin pin-nyc">
+            </motion.div>
+            <motion.div className="map-pin pin-nyc" whileHover={{ y: -4, scale: 1.04 }}>
               <span className="pin-dot" />
               <div className="pin-label"><strong>NYC</strong><br />Lat 14ms | Ok</div>
-            </div>
-            <div className="map-pin pin-sin">
+            </motion.div>
+            <motion.div className="map-pin pin-sin" whileHover={{ y: -4, scale: 1.04 }}>
               <span className="pin-dot" />
               <div className="pin-label"><strong>Singapore</strong><br />Lat 20ms | Ok</div>
-            </div>
-            <div className="map-pin pin-sao">
+            </motion.div>
+            <motion.div className="map-pin pin-sao" whileHover={{ y: -4, scale: 1.04 }}>
               <span className="pin-dot" />
               <div className="pin-label"><strong>Sao Paulo</strong><br />Lat 32ms | Ok</div>
-            </div>
-            <div className="map-pin pin-syd">
+            </motion.div>
+            <motion.div className="map-pin pin-syd" whileHover={{ y: -4, scale: 1.04 }}>
               <span className="pin-dot" />
               <div className="pin-label"><strong>Sydney</strong><br />Lat 28ms | Ok</div>
-            </div>
+            </motion.div>
 
             <div className="map-card card-global">
               <span>Global reach</span>
@@ -161,9 +222,15 @@ export function LandingPage() {
             <div className="map-footer">
               <strong>GLOBAL COVERAGE:</strong> 9 aggregate status from 12 regional check points. Detailed region map active.
             </div>
-          </div>
+          </motion.div>
 
-          <div className="landing-copy">
+          <motion.div
+            className="landing-copy"
+            initial={{ opacity: 0, y: 32 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.7, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+          >
             <p className="landing-kicker">The art of precision</p>
             <h1 id="landing-title">Signal<br />Ascendant</h1>
             <p className="landing-lede">
@@ -171,15 +238,20 @@ export function LandingPage() {
               quiet precision.
             </p>
             <div className="landing-actions">
-              <Link className="landing-primary" to="/launch">
+              <motion.div whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Link className="landing-primary" to="/launch">
                 Start monitoring
-              </Link>
-              <a className="landing-secondary" href="#signals">
+                </Link>
+              </motion.div>
+              <motion.a className="landing-secondary" href="#signals" whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}>
                 View signals
-              </a>
+              </motion.a>
             </div>
 
-            <div className="map-card card-target">
+            <motion.div
+              className="map-card card-target"
+              whileHover={{ y: -6, rotate: -0.6, boxShadow: '0 30px 80px rgba(245, 101, 101, 0.18)' }}
+            >
               <div className="target-live">
                 <span className="live-dot" /> LIVE
               </div>
@@ -188,40 +260,62 @@ export function LandingPage() {
                 <strong>TARGET CARD</strong>
                 <span>https://api.myapp.com/v1/health</span>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </section>
 
-        <section id="signals" className="landing-band reveal-on-scroll">
+        <motion.section
+          id="signals"
+          className="landing-band reveal-on-scroll"
+          initial={{ opacity: 0, y: 42 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.22 }}
+          transition={{ duration: 0.55 }}
+        >
           <div className="landing-band-heading">
             <p className="landing-kicker">Operational clarity</p>
             <h2>Every monitor gets the same visual language.</h2>
           </div>
           <div className="signal-grid">
-            {signalTiles.map((tile) => (
-              <article className={`signal-tile signal-${tile.tone}`} key={tile.label}>
+            {signalTiles.map((tile, index) => (
+              <motion.article
+                className={`signal-tile signal-${tile.tone}`}
+                key={tile.label}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.35 }}
+                transition={{ duration: 0.45, delay: index * 0.08 }}
+                whileHover={{ y: -6, scale: 1.015 }}
+              >
                 <span>{tile.label}</span>
                 <strong>{tile.value}</strong>
-              </article>
+              </motion.article>
             ))}
           </div>
-        </section>
+        </motion.section>
 
-        <section id="precision" className="landing-details reveal-on-scroll">
-          <article>
+        <motion.section
+          id="precision"
+          className="landing-details reveal-on-scroll"
+          initial={{ opacity: 0, y: 42 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.55 }}
+        >
+          <motion.article whileHover={{ y: -5 }}>
             <span>Sapphire checks</span>
             <p>Live WebSocket updates keep the console aligned with the latest backend signal.</p>
-          </article>
-          <article>
+          </motion.article>
+          <motion.article whileHover={{ y: -5 }}>
             <span>Hand stitched history</span>
             <p>Each URL detail view carries latency charts, uptime bars, and recent checks.</p>
-          </article>
-          <article>
+          </motion.article>
+          <motion.article whileHover={{ y: -5 }}>
             <span>Concierge controls</span>
             <p>Add, inspect, retry, and delete monitors without leaving the crafted console theme.</p>
-          </article>
-        </section>
-      </div>
+          </motion.article>
+        </motion.section>
+      </motion.div>
     </main>
   );
 }

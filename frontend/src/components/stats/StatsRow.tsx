@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { CheckType, PingHistoryRead } from '../../types';
 import { MetricKey } from './MetricChooser';
 
@@ -44,10 +45,26 @@ function timeAgo(isoString: string): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function getBoolean(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function getString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
 function getExtraDataForCheck(checkType: CheckType, extraData: Record<string, unknown> | null) {
   if (!extraData) return null;
-  const nestedExtraData = extraData[checkType] as Record<string, unknown> | undefined;
-  return nestedExtraData ?? extraData;
+  const nestedExtraData = extraData[checkType];
+  return isRecord(nestedExtraData) ? nestedExtraData : extraData;
 }
 
 export function StatsRow({
@@ -65,12 +82,12 @@ export function StatsRow({
   const keywordData = getExtraDataForCheck('KEYWORD', extraData);
   const downtimeData = getExtraDataForCheck('DOWNTIME_DURATION', extraData);
   const errorRateData = getExtraDataForCheck('ERROR_RATE', extraData);
-  const sslDaysRemaining = sslData ? (sslData.days_remaining as number | undefined) : undefined;
-  const ttfbMs = ttfbData ? (ttfbData.ttfb_ms as number | undefined) : undefined;
-  const keywordFound = keywordData ? (keywordData.keyword_found as boolean | undefined) : undefined;
-  const keyword = keywordData ? (keywordData.keyword as string | undefined) : undefined;
-  const downtimeMinutes30d = downtimeData ? (downtimeData.downtime_minutes_30d as number | undefined) : undefined;
-  const errorRatePct = errorRateData ? (errorRateData.error_rate_pct as number | undefined) : undefined;
+  const sslDaysRemaining = sslData ? getNumber(sslData.days_remaining) : null;
+  const ttfbMs = ttfbData ? getNumber(ttfbData.ttfb_ms) : null;
+  const keywordFound = keywordData ? getBoolean(keywordData.keyword_found) : null;
+  const keyword = keywordData ? getString(keywordData.keyword) : null;
+  const downtimeMinutes30d = downtimeData ? getNumber(downtimeData.downtime_minutes_30d) : null;
+  const errorRatePct = errorRateData ? getNumber(errorRateData.error_rate_pct) : null;
 
   const cardStyle = {
     backgroundColor: '#FFFFFF',
@@ -102,27 +119,27 @@ export function StatsRow({
     {
       key: 'sslExpiry',
       label: 'SSL expiry',
-      value: sslDaysRemaining === undefined ? 'Waiting for check' : `${sslDaysRemaining} days`,
+      value: sslDaysRemaining === null ? 'Waiting for check' : `${sslDaysRemaining} days`,
     },
     {
       key: 'ttfb',
       label: 'TTFB',
-      value: ttfbMs === undefined ? 'Waiting for check' : `${ttfbMs}ms`,
+      value: ttfbMs === null ? 'Waiting for check' : `${ttfbMs}ms`,
     },
     {
       key: 'keyword',
       label: 'Keyword',
-      value: keywordFound === undefined ? 'Waiting for check' : `${keyword ?? 'Keyword'} ${keywordFound ? 'found' : 'not found'}`,
+      value: keywordFound === null ? 'Waiting for check' : `${keyword ?? 'Keyword'} ${keywordFound ? 'found' : 'not found'}`,
     },
     {
       key: 'downtimeDuration',
       label: 'Downtime (30d)',
-      value: downtimeMinutes30d === undefined ? 'Waiting for check' : `${downtimeMinutes30d} min`,
+      value: downtimeMinutes30d === null ? 'Waiting for check' : `${downtimeMinutes30d} min`,
     },
     {
       key: 'errorRate',
       label: 'Error rate',
-      value: errorRatePct === undefined ? 'Waiting for check' : `${errorRatePct.toFixed(1)}%`,
+      value: errorRatePct === null ? 'Waiting for check' : `${errorRatePct.toFixed(1)}%`,
     },
   ];
 
@@ -137,7 +154,7 @@ export function StatsRow({
   }
 
   return (
-    <div
+    <motion.div
       className="stats-grid"
       style={{
         display: 'grid',
@@ -145,13 +162,32 @@ export function StatsRow({
         gap: 16,
         marginBottom: 32,
       }}
+      initial="hidden"
+      animate="visible"
+      variants={{
+        hidden: {},
+        visible: {
+          transition: {
+            staggerChildren: 0.055,
+          },
+        },
+      }}
     >
       {visibleCards.map((card) => (
-        <div style={cardStyle} key={card.key}>
+        <motion.div
+          style={cardStyle}
+          key={card.key}
+          variants={{
+            hidden: { opacity: 0, y: 18, scale: 0.985 },
+            visible: { opacity: 1, y: 0, scale: 1 },
+          }}
+          transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+          whileHover={{ y: -3, boxShadow: '0 14px 36px rgba(245, 101, 101, 0.1)' }}
+        >
           <div style={labelStyle}>{card.label}</div>
           <div style={valueStyle}>{card.value}</div>
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }

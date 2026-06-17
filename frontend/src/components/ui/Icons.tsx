@@ -41,3 +41,13 @@ export function BookIcon({ size = 16, color = 'currentColor', className }: IconP
     </svg>
   );
 }
+
+export function DownloadIcon({ size = 16, color = 'currentColor', className }: IconProps) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <path {...strokeProps} stroke={color} d="M12 3v12" />
+      <path {...strokeProps} stroke={color} d="M8 11l4 4l4 -4" />
+      <path {...strokeProps} stroke={color} d="M4 19h16" />
+    </svg>
+  );
+}

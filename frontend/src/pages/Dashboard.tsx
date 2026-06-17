@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { AddUrlModal } from '../components/urls/AddUrlModal';
 import { UrlList } from '../components/urls/UrlList';
@@ -16,8 +17,8 @@ import { URLItem } from '../types';
 export function Dashboard() {
   const { urls, isLoading, error, addUrl, deleteUrl, retryFetch, clearError } = useUrls();
   const navigate = useNavigate();
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [extraDataMap, setExtraDataMap] = useState<Record<number, Record<string, unknown>>>({});
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const wsUrl = buildWsUrl(import.meta.env.VITE_API_BASE_URL);
   const { lastMessage, isConnected, connectionError } = useWebSocket(wsUrl);
   const { liveUrls, lastPingMap } = useLiveStatus(urls, lastMessage);
@@ -115,30 +116,40 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="monitor-start-panel" style={{ marginBottom: 32 }}>
-        <p className="landing-kicker">Command center</p>
-        <h2 style={{ fontSize: '2.5rem', margin: '8px 0', fontFamily: 'Georgia, "Times New Roman", serif', fontWeight: 400, color: '#111827' }}>
-          Start a precision monitor
-        </h2>
-        <p style={{ fontSize: '1.1rem', color: '#6B7280', marginBottom: 24 }}>
-          Add the URL, choose only the signals you need, and set the exact check frequency.
-        </p>
-        <button
+      <motion.section
+        className="monitor-form collapsed dashboard-add-command"
+        layout
+        initial={{ opacity: 0, y: 20, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="monitor-start-panel">
+          <p className="landing-kicker">Command center</p>
+          <h2>Start a precision monitor</h2>
+          <p>Add the URL, choose only the signals you need, and set the exact check frequency.</p>
+        </div>
+
+        <motion.button
           type="button"
-          onClick={() => setIsAddModalOpen(true)}
+          disabled={isLoading}
           className="primary start-monitor-button"
+          onClick={() => setIsAddModalOpen(true)}
+          whileHover={{ y: -2, scale: 1.015 }}
+          whileTap={{ scale: 0.97 }}
         >
           Start monitoring
-        </button>
-      </div>
+        </motion.button>
+      </motion.section>
 
-      {isAddModalOpen && (
-        <AddUrlModal 
-          onAdd={handleAddUrl} 
-          isLoading={isLoading} 
-          onClose={() => setIsAddModalOpen(false)} 
-        />
-      )}
+      <AnimatePresence>
+        {isAddModalOpen && (
+          <AddUrlModal
+            onClose={() => setIsAddModalOpen(false)}
+            onAdd={handleAddUrl}
+            isLoading={isLoading}
+          />
+        )}
+      </AnimatePresence>
 
       {isLoading && urls.length === 0 && renderSkeletons()}
       {!isLoading && error && urls.length === 0 && renderErrorState()}
