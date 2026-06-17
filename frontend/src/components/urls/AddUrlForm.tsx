@@ -1,6 +1,7 @@
 import { useState, FormEvent, useEffect, ClipboardEvent } from 'react';
 import { AddURLPayload, CheckType } from '../../types';
 import { SignalSelector } from './SignalSelector';
+import { IntervalInput, UnitType, convertToSeconds } from './IntervalInput';
 
 interface AddUrlFormProps {
   onAdd: (payload: AddURLPayload) => Promise<void> | void;
@@ -10,8 +11,10 @@ interface AddUrlFormProps {
 export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
-  const [intervalValue, setIntervalValue] = useState(30);
-  const [intervalUnit, setIntervalUnit] = useState<'minutes' | 'hours' | 'days'>('minutes');
+  const [intervalValue, setIntervalValue] = useState('30');
+  const [intervalUnit, setIntervalUnit] = useState<UnitType>('minutes');
+  const [intervalError, setIntervalError] = useState<string | null>(null);
+  const [touchedInterval, setTouchedInterval] = useState(false);
   const [selectedSignals, setSelectedSignals] = useState<CheckType[]>(['HTTP']);
   const [keyword, setKeyword] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
@@ -67,8 +70,12 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
     if (!isValidKeyword) setKeywordError('Keyword is required');
     if (!isValidKeyword) return;
 
-    const intervalMultiplier = intervalUnit === 'days' ? 86400 : intervalUnit === 'hours' ? 3600 : 60;
-    const intervalSeconds = Math.max(60, Math.floor(intervalValue) * intervalMultiplier);
+    if (intervalError) {
+      setTouchedInterval(true);
+      return;
+    }
+
+    const intervalSeconds = convertToSeconds(intervalValue, intervalUnit);
 
     try {
       await onAdd({
@@ -86,13 +93,14 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
     setName('');
     setUrl('');
     setKeyword('');
-    setIntervalValue(30);
+    setIntervalValue('30');
     setIntervalUnit('minutes');
     setSelectedSignals(['HTTP']);
     setHasStarted(false);
     setTouchedName(false);
     setTouchedUrl(false);
     setTouchedKeyword(false);
+    setTouchedInterval(false);
     setWasAdded(true);
     window.setTimeout(() => setWasAdded(false), 2000);
   };
@@ -108,7 +116,7 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
     }
   };
 
-  const hasErrors = nameError !== null || urlError !== null || keywordError !== null;
+  const hasErrors = nameError !== null || urlError !== null || keywordError !== null || intervalError !== null;
   const isBasicValid = Boolean(name.trim()) && name.length <= 100 && /^https?:\/\/.+\..+/.test(url);
   const showAdvancedOptions = hasStarted && isBasicValid;
 
@@ -184,27 +192,18 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
 
           <div className="interval-builder">
             <label htmlFor="ping-interval-value">Check frequency</label>
-            <div className="interval-control">
-              <input
-                id="ping-interval-value"
-                type="number"
-                min={1}
-                value={intervalValue}
-                onChange={(e) => setIntervalValue(Math.max(1, Number(e.target.value) || 1))}
-              />
-              <div className="interval-unit-group" aria-label="Interval unit">
-                {(['minutes', 'hours', 'days'] as const).map((unit) => (
-                  <button
-                    key={unit}
-                    type="button"
-                    className={intervalUnit === unit ? 'selected' : ''}
-                    onClick={() => setIntervalUnit(unit)}
-                  >
-                    {unit}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <IntervalInput
+              id="ping-interval-value"
+              value={intervalValue}
+              unit={intervalUnit}
+              onChange={(v, u) => {
+                setIntervalValue(v);
+                setIntervalUnit(u);
+              }}
+              onErrorChange={setIntervalError}
+              touched={touchedInterval}
+              onBlur={() => setTouchedInterval(true)}
+            />
           </div>
 
           {selectedSignals.includes('KEYWORD') && (

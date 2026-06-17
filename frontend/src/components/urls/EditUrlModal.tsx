@@ -1,6 +1,7 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { updateUrl } from '../../api/client';
 import { URLItem } from '../../types';
+import { IntervalInput, UnitType, convertToSeconds, parseSeconds } from './IntervalInput';
 
 interface EditUrlModalProps {
   url: URLItem | null;
@@ -11,7 +12,10 @@ interface EditUrlModalProps {
 export function EditUrlModal({ url, onClose, onSuccess }: EditUrlModalProps) {
   const [name, setName] = useState('');
   const [webAddress, setWebAddress] = useState('');
-  const [interval, setIntervalVal] = useState(30);
+  const [intervalValue, setIntervalValue] = useState('30');
+  const [intervalUnit, setIntervalUnit] = useState<UnitType>('minutes');
+  const [intervalError, setIntervalError] = useState<string | null>(null);
+  const [touchedInterval, setTouchedInterval] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +23,9 @@ export function EditUrlModal({ url, onClose, onSuccess }: EditUrlModalProps) {
     if (url) {
       setName(url.name);
       setWebAddress(url.web_address);
-      setIntervalVal(url.ping_interval_seconds || 30);
+      const parsed = parseSeconds(url.ping_interval_seconds || 30);
+      setIntervalValue(parsed.value);
+      setIntervalUnit(parsed.unit);
     }
   }, [url]);
 
@@ -27,14 +33,19 @@ export function EditUrlModal({ url, onClose, onSuccess }: EditUrlModalProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (intervalError) {
+      setTouchedInterval(true);
+      return;
+    }
     setError(null);
     setIsSubmitting(true);
 
     try {
+      const intervalSeconds = convertToSeconds(intervalValue, intervalUnit);
       const updated = await updateUrl(url.id, {
         name: name !== url.name ? name : undefined,
         web_address: webAddress !== url.web_address ? webAddress : undefined,
-        ping_interval_seconds: interval !== url.ping_interval_seconds ? interval : undefined
+        ping_interval_seconds: intervalSeconds !== url.ping_interval_seconds ? intervalSeconds : undefined
       });
       onSuccess(updated);
     } catch (err: any) {
@@ -80,30 +91,18 @@ export function EditUrlModal({ url, onClose, onSuccess }: EditUrlModalProps) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label htmlFor="ping-interval-edit" style={{ fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Ping interval</label>
-            <select
+            <IntervalInput
               id="ping-interval-edit"
-              value={interval}
-              onChange={(e) => setIntervalVal(Number(e.target.value))}
-              style={{
-                padding: '10px 14px',
-                borderRadius: 6,
-                border: '1px solid rgba(0, 0, 0, 0.1)',
-                backgroundColor: '#FCFCFC',
-                fontSize: '15px',
-                color: '#111827',
-                outline: 'none',
+              value={intervalValue}
+              unit={intervalUnit}
+              onChange={(v, u) => {
+                setIntervalValue(v);
+                setIntervalUnit(u);
               }}
-            >
-              <option value={30}>30 seconds</option>
-              <option value={60}>1 minute</option>
-              <option value={300}>5 minutes</option>
-              <option value={1800}>30 minutes</option>
-              <option value={3600}>1 hour</option>
-              <option value={21600}>6 hours</option>
-              <option value={43200}>12 hours</option>
-              <option value={86400}>1 day</option>
-              <option value={259200}>3 days</option>
-            </select>
+              onErrorChange={setIntervalError}
+              touched={touchedInterval}
+              onBlur={() => setTouchedInterval(true)}
+            />
           </div>
 
           {error && <div style={{ color: '#F56565', fontSize: 13 }}>{error}</div>}
