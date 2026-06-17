@@ -5,65 +5,77 @@ interface SidebarProps {
   urlCount: number;
 }
 
+const navGroups = [
+  {
+    label: 'Operations',
+    items: [
+      { to: '/dashboard', label: 'Home', icon: 'ti-home-2' },
+      { to: '/monitors', label: 'Monitors', icon: 'ti-radar-2', countKey: 'urlCount' },
+      { to: '/incidents', label: 'Incidents', icon: 'ti-alert-triangle', count: 3 },
+      { to: '/status-pages', label: 'Status Pages', icon: 'ti-world-share' },
+    ],
+  },
+  {
+    label: 'Control',
+    items: [
+      { to: '/maintenance', label: 'Maintenance', icon: 'ti-calendar-time' },
+      { to: '/alerts', label: 'Alerts', icon: 'ti-bell-ringing', count: 4 },
+      { to: '/reports', label: 'Reports', icon: 'ti-file-analytics' },
+    ],
+  },
+  {
+    label: 'Admin',
+    items: [
+      { to: '/integrations', label: 'Integrations', icon: 'ti-plug-connected' },
+      { to: '/settings', label: 'Settings', icon: 'ti-settings' },
+    ],
+  },
+];
+
 export function Sidebar({ urlCount }: SidebarProps) {
   const location = useLocation();
-  const isDashboard = location.pathname === '/dashboard' || location.pathname.startsWith('/urls/');
-
-  const navStyle = {
-    padding: '9px 12px',
-    textDecoration: 'none',
-    borderRadius: 6,
-    fontWeight: 500,
-    transition: 'background 0.15s, color 0.15s',
-    borderLeft: '3px solid transparent',
-  };
+  const isUrlDetail = location.pathname.startsWith('/urls/');
 
   return (
-    <aside
-      className="sidebar"
-    >
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <NavLink
-          to="/dashboard"
-          style={{
-            ...navStyle,
-            color: isDashboard ? '#111827' : '#6B7280',
-            backgroundColor: isDashboard ? 'rgba(255, 127, 80, 0.1)' : 'transparent',
-            borderLeftColor: isDashboard ? '#FF7F50' : 'transparent',
-          }}
-        >
-          <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-            Dashboard
-            <span
-              style={{
-                minWidth: 20,
-                height: 20,
-                borderRadius: 10,
-                backgroundColor: 'rgba(255, 127, 80, 0.1)',
-                color: '#D6543D',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 12,
-              }}
-            >
-              {urlCount}
-            </span>
-          </span>
-        </NavLink>
+    <aside className="sidebar">
+      <nav className="sidebar-nav" aria-label="Operational navigation">
+        {navGroups.map((group) => (
+          <div className="sidebar-group" key={group.label}>
+            <div className="sidebar-group-label">{group.label}</div>
+            {group.items.map((item) => {
+              const count = item.countKey === 'urlCount' ? urlCount : item.count;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) => {
+                    const active = isActive || (isUrlDetail && item.to === '/monitors');
+                    return `sidebar-link${active ? ' active' : ''}`;
+                  }}
+                >
+                  <span className="sidebar-link-main">
+                    <i className={`ti ${item.icon}`} aria-hidden="true" />
+                    {item.label}
+                  </span>
+                  {typeof count === 'number' && <span className="sidebar-count">{count}</span>}
+                </NavLink>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
-      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="sidebar-footer">
         <a
           href={`${import.meta.env.VITE_API_BASE_URL}/docs`}
           target="_blank"
           rel="noreferrer"
-          style={{ color: '#6B7280', fontSize: 13, display: 'inline-flex', gap: 8 }}
+          className="sidebar-doc-link"
         >
           <BookIcon size={15} />
-          Docs
+          API Docs
         </a>
-        <div style={{ color: '#9CA3AF', fontSize: 12 }}>v0.1.0</div>
+        <div className="sidebar-version">v0.2.0 operational</div>
       </div>
     </aside>
   );

@@ -13,7 +13,15 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/launch" element={<LaunchPage />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard view="home" />} />
+          <Route path="/monitors" element={<Dashboard view="monitors" />} />
+          <Route path="/incidents" element={<Dashboard view="incidents" />} />
+          <Route path="/status-pages" element={<Dashboard view="status-pages" />} />
+          <Route path="/maintenance" element={<Dashboard view="maintenance" />} />
+          <Route path="/alerts" element={<Dashboard view="alerts" />} />
+          <Route path="/reports" element={<Dashboard view="reports" />} />
+          <Route path="/integrations" element={<Dashboard view="integrations" />} />
+          <Route path="/settings" element={<Dashboard view="settings" />} />
           <Route path="/urls/:id" element={<UrlDetailPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

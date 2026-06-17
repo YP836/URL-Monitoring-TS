@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect, ClipboardEvent } from 'react';
+import { useState, FormEvent, useEffect, ClipboardEvent, type MouseEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AddURLPayload, CheckType } from '../../types';
 import { SignalSelector } from './SignalSelector';
@@ -155,7 +155,7 @@ export function AddUrlModal({ onAdd, isLoading, onClose }: AddUrlModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-url-modal-title"
-        onClick={(event) => event.stopPropagation()}
+        onClick={(event: MouseEvent<HTMLDivElement>) => event.stopPropagation()}
         initial={{ opacity: 0, y: 18, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 12, scale: 0.97 }}

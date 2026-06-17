@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckType, PingResult, URLItem } from '../../types';
@@ -184,6 +184,7 @@ export function UrlCard({ url, onDelete, onInspect, extraData, lastPing }: UrlCa
         whileHover={{ y: -5, scale: 1.012 }}
         whileTap={{ scale: 0.995 }}
         transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+        data-signal-count={signalLines.length}
         style={{
           cursor: 'pointer',
           borderColor:
@@ -265,7 +266,7 @@ export function UrlCard({ url, onDelete, onInspect, extraData, lastPing }: UrlCa
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={`delete-title-${url.id}`}
-                onClick={(event) => event.stopPropagation()}
+                onClick={(event: MouseEvent<HTMLDivElement>) => event.stopPropagation()}
                 initial={{ opacity: 0, y: 18, scale: 0.96, filter: 'blur(8px)' }}
                 animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
                 exit={{ opacity: 0, y: 12, scale: 0.96, filter: 'blur(8px)' }}
