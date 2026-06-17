@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 
 from ..database import get_connection
-from ..models import PingHistoryRead, URLCreate, URLDetail, URLExtraData, URLRead
+from ..models import PingHistoryRead, URLCreate, URLDetail, URLExtraData, URLRead, URLUpdate
 
 
 router = APIRouter()
@@ -37,7 +37,9 @@ async def list_urls() -> list[URLRead]:
         async with get_connection() as conn:
             rows = await conn.fetch(
                 """
-                SELECT id, web_address, name, status, created_at, check_type, keyword_to_find
+                SELECT
+                    id, web_address, name, status, created_at, check_type, keyword_to_find,
+                    check_interval_seconds, ping_interval_seconds
                 FROM urls
                 ORDER BY created_at DESC
                 """
@@ -69,15 +71,21 @@ async def create_url(payload: URLCreate) -> URLRead:
             row = await conn.fetchrow(
                 """
                 INSERT INTO urls
-                    (web_address, name, status, created_at, check_type, keyword_to_find, check_interval_seconds)
-                VALUES ($1, $2, 'PENDING', NOW(), $3, $4, $5)
-                RETURNING id, web_address, name, status, created_at, check_type, keyword_to_find
+                    (
+                        web_address, name, status, created_at, check_type, keyword_to_find,
+                        check_interval_seconds, ping_interval_seconds
+                    )
+                VALUES ($1, $2, 'PENDING', NOW(), $3, $4, $5, $6)
+                RETURNING
+                    id, web_address, name, status, created_at, check_type, keyword_to_find,
+                    check_interval_seconds, ping_interval_seconds
                 """,
                 web_address,
                 payload.name,
                 payload.check_type,
                 payload.keyword_to_find,
                 payload.check_interval_seconds,
+                payload.ping_interval_seconds,
             )
             return URLRead(**dict(row))
     except HTTPException:
@@ -101,6 +109,8 @@ async def create_url(payload: URLCreate) -> URLRead:
             created_at=datetime.now(),
             check_type=payload.check_type,
             keyword_to_find=payload.keyword_to_find,
+            check_interval_seconds=payload.check_interval_seconds,
+            ping_interval_seconds=payload.ping_interval_seconds,
         )
         _mock_urls[url_id] = new_url
         return new_url
@@ -113,7 +123,9 @@ async def get_url_detail(url_id: int) -> URLDetail:
         async with get_connection() as conn:
             row = await conn.fetchrow(
                 """
-                SELECT id, web_address, name, status, created_at, check_type, keyword_to_find
+                SELECT
+                    id, web_address, name, status, created_at, check_type, keyword_to_find,
+                    check_interval_seconds, ping_interval_seconds
                 FROM urls
                 WHERE id = $1
                 """,
@@ -197,6 +209,56 @@ async def get_url_extra_data(url_id: int) -> URLExtraData:
         raise
     except Exception:
         raise HTTPException(status_code=404, detail="No extra data found")
+
+
+@router.put("/urls/{url_id}", response_model=URLRead)
+async def update_url(url_id: int, payload: URLUpdate) -> URLRead:
+    """Update mutable URL fields without changing its selected monitoring signals."""
+    try:
+        async with get_connection() as conn:
+            existing = await conn.fetchrow("SELECT * FROM urls WHERE id = $1", url_id)
+            if not existing:
+                raise HTTPException(status_code=404, detail="URL not found")
+
+            new_web_address = str(payload.web_address) if payload.web_address else existing["web_address"]
+            new_name = payload.name if payload.name else existing["name"]
+            new_interval = (
+                payload.ping_interval_seconds
+                if payload.ping_interval_seconds is not None
+                else existing["ping_interval_seconds"]
+            )
+
+            row = await conn.fetchrow(
+                """
+                UPDATE urls
+                SET web_address = $1, name = $2, ping_interval_seconds = $3, check_interval_seconds = $3
+                WHERE id = $4
+                RETURNING
+                    id, web_address, name, status, created_at, check_type, keyword_to_find,
+                    check_interval_seconds, ping_interval_seconds
+                """,
+                new_web_address,
+                new_name,
+                new_interval,
+                url_id,
+            )
+            return URLRead(**dict(row))
+    except HTTPException:
+        raise
+    except Exception:
+        url = _mock_urls.get(url_id)
+        if not url:
+            raise HTTPException(status_code=404, detail="URL not found")
+
+        if payload.name:
+            url.name = payload.name
+        if payload.web_address:
+            url.web_address = str(payload.web_address)
+        if payload.ping_interval_seconds is not None:
+            url.ping_interval_seconds = payload.ping_interval_seconds
+            url.check_interval_seconds = payload.ping_interval_seconds
+
+        return url
 
 
 @router.delete("/urls/{url_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -21,16 +21,6 @@ export function Sidebar({ urlCount }: SidebarProps) {
   return (
     <aside
       className="sidebar"
-      style={{
-        width: 200,
-        borderRight: '1px solid rgba(0, 0, 0, 0.05)',
-        backgroundColor: 'rgba(255, 255, 255, 0.92)',
-        padding: '24px 16px',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: 'inset -1px 0 0 rgba(0, 0, 0, 0.04)',
-      }}
     >
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <NavLink
@@ -38,7 +28,7 @@ export function Sidebar({ urlCount }: SidebarProps) {
           style={{
             ...navStyle,
             color: isDashboard ? '#111827' : '#6B7280',
-            backgroundColor: isDashboard ? 'rgba(245, 101, 101, 0.1)' : 'transparent',
+            backgroundColor: isDashboard ? 'rgba(255, 127, 80, 0.1)' : 'transparent',
             borderLeftColor: isDashboard ? '#FF7F50' : 'transparent',
           }}
         >
@@ -49,8 +39,8 @@ export function Sidebar({ urlCount }: SidebarProps) {
                 minWidth: 20,
                 height: 20,
                 borderRadius: 10,
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                color: '#111827',
+                backgroundColor: 'rgba(255, 127, 80, 0.1)',
+                color: '#D6543D',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',

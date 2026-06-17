@@ -30,6 +30,7 @@ export interface AddURLPayload {
   check_type?: string;
   keyword_to_find?: string;
   check_interval_seconds?: number;
+  ping_interval_seconds?: number;
 }
 
 export interface URLDetail extends URLItem {

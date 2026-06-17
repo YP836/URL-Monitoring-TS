@@ -10,10 +10,11 @@ interface AddUrlFormProps {
 export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
+  const [intervalValue, setIntervalValue] = useState(30);
+  const [intervalUnit, setIntervalUnit] = useState<'minutes' | 'hours' | 'days'>('minutes');
   const [selectedSignals, setSelectedSignals] = useState<CheckType[]>(['HTTP']);
   const [keyword, setKeyword] = useState('');
-  const [checkInterval, setCheckInterval] = useState(60);
-  const [showSignalOptions, setShowSignalOptions] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
   const [touchedName, setTouchedName] = useState(false);
   const [touchedUrl, setTouchedUrl] = useState(false);
   const [touchedKeyword, setTouchedKeyword] = useState(false);
@@ -49,21 +50,25 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (!hasStarted) {
+      setHasStarted(true);
+      return;
+    }
+
     setTouchedName(true);
     setTouchedUrl(true);
 
     const isValidUrl = /^https?:\/\/.+\..+/.test(url);
     if (!name.trim() || name.length > 100 || !isValidUrl) return;
 
-    if (!showSignalOptions) {
-      setShowSignalOptions(true);
-      return;
-    }
-
     setTouchedKeyword(true);
     const isValidKeyword = !selectedSignals.includes('KEYWORD') || Boolean(keyword.trim());
     if (!isValidKeyword) setKeywordError('Keyword is required');
     if (!isValidKeyword) return;
+
+    const intervalMultiplier = intervalUnit === 'days' ? 86400 : intervalUnit === 'hours' ? 3600 : 60;
+    const intervalSeconds = Math.max(60, Math.floor(intervalValue) * intervalMultiplier);
 
     try {
       await onAdd({
@@ -71,7 +76,8 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
         web_address: url.trim(),
         check_type: selectedSignals.join(','),
         keyword_to_find: selectedSignals.includes('KEYWORD') ? keyword.trim() : undefined,
-        check_interval_seconds: checkInterval,
+        check_interval_seconds: intervalSeconds,
+        ping_interval_seconds: intervalSeconds,
       });
     } catch {
       return;
@@ -80,9 +86,10 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
     setName('');
     setUrl('');
     setKeyword('');
+    setIntervalValue(30);
+    setIntervalUnit('minutes');
     setSelectedSignals(['HTTP']);
-    setCheckInterval(60);
-    setShowSignalOptions(false);
+    setHasStarted(false);
     setTouchedName(false);
     setTouchedUrl(false);
     setTouchedKeyword(false);
@@ -102,48 +109,70 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
   };
 
   const hasErrors = nameError !== null || urlError !== null || keywordError !== null;
+  const isBasicValid = Boolean(name.trim()) && name.length <= 100 && /^https?:\/\/.+\..+/.test(url);
+  const showAdvancedOptions = hasStarted && isBasicValid;
 
   return (
-    <form className="monitor-form" onSubmit={handleSubmit}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <label htmlFor="site-name">Site name</label>
-        <input
-          id="site-name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={() => setTouchedName(true)}
-          placeholder="My Website"
-        />
-        {nameError && touchedName && <div className="field-error">{nameError}</div>}
-      </div>
+    <form
+      className={`monitor-form${hasStarted ? ' expanded' : ' collapsed'}${showAdvancedOptions ? ' advanced' : ' basic'}`}
+      onSubmit={handleSubmit}
+    >
+      {!hasStarted && (
+        <div className="monitor-start-panel">
+          <p className="landing-kicker">Command center</p>
+          <h2>Start a precision monitor</h2>
+          <p>Add the URL, choose only the signals you need, and set the exact check frequency.</p>
+        </div>
+      )}
 
-      <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <label htmlFor="site-url">URL</label>
-        <input
-          id="site-url"
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onBlur={() => setTouchedUrl(true)}
-          onPaste={handleUrlPaste}
-          placeholder="https://example.com"
-        />
-        {urlError && touchedUrl && <div className="field-error">{urlError}</div>}
-      </div>
-
-      <div style={{ marginTop: 24 }}>
+      {!hasStarted && (
         <button
           type="submit"
-          disabled={isLoading || hasErrors}
-          className="primary"
-          style={{ color: wasAdded ? '#D8F8EA' : undefined, backgroundColor: wasAdded ? '#1D9E75' : undefined }}
+          disabled={isLoading}
+          className="primary start-monitor-button"
         >
-          {wasAdded ? 'Added' : isLoading ? 'Adding...' : showSignalOptions ? 'Save monitor' : 'Start monitoring'}
+          {wasAdded ? 'Added' : isLoading ? 'Opening...' : 'Start monitoring'}
         </button>
-      </div>
+      )}
 
-      {showSignalOptions && (
+      {hasStarted && (
+        <>
+          <div className="monitor-field site-name-field">
+            <label htmlFor="site-name">Site name</label>
+            <input
+              id="site-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={() => setTouchedName(true)}
+              placeholder="My Website"
+            />
+            {nameError && touchedName && <div className="field-error">{nameError}</div>}
+          </div>
+
+          <div className="monitor-field site-url-field">
+            <label htmlFor="site-url">URL</label>
+            <input
+              id="site-url"
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onBlur={() => setTouchedUrl(true)}
+              onPaste={handleUrlPaste}
+              placeholder="https://example.com"
+            />
+            {urlError && touchedUrl && <div className="field-error">{urlError}</div>}
+          </div>
+
+          <div className="monitor-submit-slot">
+            <button type="submit" disabled={isLoading || hasErrors} className="primary">
+              {wasAdded ? 'Added' : isLoading ? 'Adding...' : showAdvancedOptions ? 'Save monitor' : 'Continue'}
+            </button>
+          </div>
+        </>
+      )}
+
+      {showAdvancedOptions && (
         <div className="monitor-options-panel">
           <div>
             <p className="landing-kicker">Choose signal checks</p>
@@ -152,6 +181,31 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
           </div>
 
           <SignalSelector selectedSignals={selectedSignals} onChange={setSelectedSignals} />
+
+          <div className="interval-builder">
+            <label htmlFor="ping-interval-value">Check frequency</label>
+            <div className="interval-control">
+              <input
+                id="ping-interval-value"
+                type="number"
+                min={1}
+                value={intervalValue}
+                onChange={(e) => setIntervalValue(Math.max(1, Number(e.target.value) || 1))}
+              />
+              <div className="interval-unit-group" aria-label="Interval unit">
+                {(['minutes', 'hours', 'days'] as const).map((unit) => (
+                  <button
+                    key={unit}
+                    type="button"
+                    className={intervalUnit === unit ? 'selected' : ''}
+                    onClick={() => setIntervalUnit(unit)}
+                  >
+                    {unit}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
           {selectedSignals.includes('KEYWORD') && (
             <div className="keyword-field">
@@ -168,31 +222,6 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
               {keywordError && touchedKeyword && <div className="field-error">{keywordError}</div>}
             </div>
           )}
-
-          <div className="keyword-field" style={{ marginTop: 16 }}>
-            <label htmlFor="check-interval">Ping frequency</label>
-            <select
-              id="check-interval"
-              value={checkInterval}
-              onChange={(e) => setCheckInterval(Number(e.target.value))}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: '1px solid rgba(0,0,0,0.1)',
-                background: '#FFFFFF',
-                color: '#111827',
-                fontSize: '0.875rem'
-              }}
-            >
-              <option value={30}>Every 30 seconds</option>
-              <option value={60}>Every 1 minute</option>
-              <option value={300}>Every 5 minutes</option>
-              <option value={1800}>Every 30 minutes</option>
-              <option value={3600}>Every 1 hour</option>
-              <option value={86400}>Every 1 day</option>
-              <option value={259200}>Every 3 days</option>
-            </select>
-          </div>
         </div>
       )}
     </form>

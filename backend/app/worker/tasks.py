@@ -72,7 +72,7 @@ def _write_check_result(result: CheckResult) -> None:
                     ),
                 )
             cur.execute(
-                "UPDATE urls SET status = %s WHERE id = %s",
+                "UPDATE urls SET status = %s, last_pinged_at = NOW() WHERE id = %s",
                 (result.status, result.url_id),
             )
         conn.commit()
@@ -187,7 +187,15 @@ def schedule_ping_tasks() -> dict:
     try:
         conn = _get_sync_conn()
         with conn.cursor() as cur:
-            cur.execute("SELECT id, web_address, check_type, keyword_to_find FROM urls")
+            cur.execute(
+                """
+                SELECT id, web_address, check_type, keyword_to_find
+                FROM urls
+                WHERE last_pinged_at IS NULL
+                   OR EXTRACT(EPOCH FROM (NOW() - last_pinged_at)) >=
+                      COALESCE(ping_interval_seconds, check_interval_seconds, 30)
+                """
+            )
             rows = cur.fetchall()
     except Exception:
         logger.exception("[schedule_ping_tasks] Failed to fetch URLs")

@@ -16,8 +16,9 @@ export function LaunchPage() {
         <div className="launch-brand">UPTIME<span>.9</span></div>
         <div className="launch-scan" />
         <div className="launch-copy">
-          <strong>THE LUXURY</strong>
-          <strong>OF RELIABILITY</strong>
+          <span>Opening monitoring console</span>
+          <strong>WATCH EVERY URL</strong>
+          <strong>BEFORE IT FAILS</strong>
         </div>
       </section>
     </main>

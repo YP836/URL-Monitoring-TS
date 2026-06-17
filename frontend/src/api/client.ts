@@ -23,6 +23,7 @@ export const addUrl = async (payload: AddURLPayload): Promise<URLItem> => {
       check_type: payload.check_type ?? 'HTTP',
       keyword_to_find: payload.keyword_to_find,
       check_interval_seconds: payload.check_interval_seconds ?? 30,
+      ping_interval_seconds: payload.ping_interval_seconds ?? payload.check_interval_seconds ?? 30,
     });
     return response.data;
   } catch (error) {

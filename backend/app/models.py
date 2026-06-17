@@ -18,6 +18,7 @@ class URLCreate(BaseModel):
     check_type: str = "HTTP"
     keyword_to_find: str | None = None
     check_interval_seconds: int = 30
+    ping_interval_seconds: int = 30
 
     @model_validator(mode="after")
     def validate_keyword_check(self) -> "URLCreate":
@@ -40,6 +41,14 @@ class URLRead(BaseModel):
     created_at: datetime
     check_type: str = "HTTP"
     keyword_to_find: str | None = None
+    check_interval_seconds: int = 30
+    ping_interval_seconds: int = 30
+
+
+class URLUpdate(BaseModel):
+    web_address: HttpUrl | None = None
+    name: str | None = Field(None, min_length=1, max_length=100)
+    ping_interval_seconds: int | None = None
 
 
 class URLDetail(URLRead):

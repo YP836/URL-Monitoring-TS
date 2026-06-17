@@ -7,20 +7,20 @@ interface BadgeProps {
 
 export function Badge({ label, variant }: BadgeProps) {
   let bgColor = 'rgba(255, 255, 255, 0.09)';
-  let textColor = '#111827';
-  let borderColor = 'rgba(255, 255, 255, 0.12)';
+  let textColor = '#374151';
+  let borderColor = 'rgba(17, 24, 39, 0.1)';
 
   if (variant === 'success') {
     bgColor = 'rgba(29, 158, 117, 0.14)';
-    textColor = '#72E0BC';
+    textColor = '#1D9E75';
     borderColor = 'rgba(29, 158, 117, 0.3)';
   } else if (variant === 'danger') {
     bgColor = 'rgba(226, 75, 74, 0.14)';
-    textColor = '#FF8D84';
+    textColor = '#C53B3A';
     borderColor = 'rgba(226, 75, 74, 0.3)';
   } else if (variant === 'warning') {
     bgColor = 'rgba(186, 117, 23, 0.16)';
-    textColor = '#F0B45F';
+    textColor = '#BA7517';
     borderColor = 'rgba(186, 117, 23, 0.34)';
   }
 

@@ -19,6 +19,7 @@ export function StatusDot({ status }: StatusDotProps) {
         height: 10,
         borderRadius: '50%',
         backgroundColor: colorMap[status],
+        boxShadow: `0 0 18px ${colorMap[status]}`,
         display: 'inline-block',
       }}
       title={`Status: ${status}`}

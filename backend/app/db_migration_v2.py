@@ -10,10 +10,17 @@ MIGRATION_SQL = """
 ALTER TABLE urls
   ADD COLUMN IF NOT EXISTS check_type VARCHAR(160) NOT NULL DEFAULT 'HTTP',
   ADD COLUMN IF NOT EXISTS keyword_to_find VARCHAR(255),
-  ADD COLUMN IF NOT EXISTS check_interval_seconds INTEGER NOT NULL DEFAULT 30;
+  ADD COLUMN IF NOT EXISTS check_interval_seconds INTEGER NOT NULL DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS ping_interval_seconds INTEGER NOT NULL DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS last_pinged_at TIMESTAMPTZ;
 
 ALTER TABLE urls
   ALTER COLUMN check_type TYPE VARCHAR(160);
+
+UPDATE urls
+SET
+  check_interval_seconds = COALESCE(check_interval_seconds, ping_interval_seconds, 30),
+  ping_interval_seconds = COALESCE(ping_interval_seconds, check_interval_seconds, 30);
 
 ALTER TABLE ping_history
   ADD COLUMN IF NOT EXISTS check_type VARCHAR(20),
