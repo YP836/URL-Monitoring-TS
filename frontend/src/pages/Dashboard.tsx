@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AddUrlForm } from '../components/urls/AddUrlForm';
+import { AddUrlModal } from '../components/urls/AddUrlModal';
 import { UrlList } from '../components/urls/UrlList';
 import { Toast } from '../components/ui/Toast';
 import { Badge } from '../components/ui/Badge';
@@ -16,6 +16,7 @@ import { URLItem } from '../types';
 export function Dashboard() {
   const { urls, isLoading, error, addUrl, deleteUrl, retryFetch, clearError } = useUrls();
   const navigate = useNavigate();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [extraDataMap, setExtraDataMap] = useState<Record<number, Record<string, unknown>>>({});
   const wsUrl = buildWsUrl(import.meta.env.VITE_API_BASE_URL);
   const { lastMessage, isConnected, connectionError } = useWebSocket(wsUrl);
@@ -114,7 +115,30 @@ export function Dashboard() {
         </div>
       </div>
 
-      <AddUrlForm onAdd={handleAddUrl} isLoading={isLoading} />
+      <div className="monitor-start-panel" style={{ marginBottom: 32 }}>
+        <p className="landing-kicker">Command center</p>
+        <h2 style={{ fontSize: '2.5rem', margin: '8px 0', fontFamily: 'Georgia, "Times New Roman", serif', fontWeight: 400, color: '#111827' }}>
+          Start a precision monitor
+        </h2>
+        <p style={{ fontSize: '1.1rem', color: '#6B7280', marginBottom: 24 }}>
+          Add the URL, choose only the signals you need, and set the exact check frequency.
+        </p>
+        <button
+          type="button"
+          onClick={() => setIsAddModalOpen(true)}
+          className="primary start-monitor-button"
+        >
+          Start monitoring
+        </button>
+      </div>
+
+      {isAddModalOpen && (
+        <AddUrlModal 
+          onAdd={handleAddUrl} 
+          isLoading={isLoading} 
+          onClose={() => setIsAddModalOpen(false)} 
+        />
+      )}
 
       {isLoading && urls.length === 0 && renderSkeletons()}
       {!isLoading && error && urls.length === 0 && renderErrorState()}

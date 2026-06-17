@@ -78,6 +78,7 @@ export function IntervalInput({ value, unit, onChange, onErrorChange, id, touche
             border: '1px solid rgba(0, 0, 0, 0.1)',
             backgroundColor: '#FCFCFC',
             fontSize: '15px',
+            fontWeight: 'normal',
             color: '#111827',
             outline: 'none',
             textAlign: 'center',
@@ -94,12 +95,11 @@ export function IntervalInput({ value, unit, onChange, onErrorChange, id, touche
             backgroundColor: '#FCFCFC',
             fontSize: '15px',
             color: '#111827',
-            fontWeight: 600,
             outline: 'none',
           }}
         >
           {UNITS.map((u) => (
-            <option key={u} value={u} style={{ fontWeight: 600 }}>
+            <option key={u} value={u}>
               {formatUnitLabel(u, value)}
             </option>
           ))}

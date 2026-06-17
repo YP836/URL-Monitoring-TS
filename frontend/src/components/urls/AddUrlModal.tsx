@@ -3,12 +3,13 @@ import { AddURLPayload, CheckType } from '../../types';
 import { SignalSelector } from './SignalSelector';
 import { IntervalInput, UnitType, convertToSeconds } from './IntervalInput';
 
-interface AddUrlFormProps {
+interface AddUrlModalProps {
   onAdd: (payload: AddURLPayload) => Promise<void> | void;
   isLoading: boolean;
+  onClose: () => void;
 }
 
-export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
+export function AddUrlModal({ onAdd, isLoading, onClose }: AddUrlModalProps) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [intervalValue, setIntervalValue] = useState('30');
@@ -17,11 +18,11 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
   const [touchedInterval, setTouchedInterval] = useState(false);
   const [selectedSignals, setSelectedSignals] = useState<CheckType[]>(['HTTP']);
   const [keyword, setKeyword] = useState('');
-  const [hasStarted, setHasStarted] = useState(false);
+  
   const [touchedName, setTouchedName] = useState(false);
   const [touchedUrl, setTouchedUrl] = useState(false);
   const [touchedKeyword, setTouchedKeyword] = useState(false);
-  const [wasAdded, setWasAdded] = useState(false);
+  
   const [nameError, setNameError] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [keywordError, setKeywordError] = useState<string | null>(null);
@@ -45,7 +46,6 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
       setKeywordError(null);
       return;
     }
-
     if (!touchedKeyword) return;
     if (!keyword.trim()) setKeywordError('Keyword is required');
     else setKeywordError(null);
@@ -53,15 +53,9 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
-    if (!hasStarted) {
-      setHasStarted(true);
-      return;
-    }
-
     setTouchedName(true);
     setTouchedUrl(true);
-
+    
     const isValidUrl = /^https?:\/\/.+\..+/.test(url);
     if (!name.trim() || name.length > 100 || !isValidUrl) return;
 
@@ -86,29 +80,15 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
         check_interval_seconds: intervalSeconds,
         ping_interval_seconds: intervalSeconds,
       });
+      onClose(); // close on success
     } catch {
       return;
     }
-
-    setName('');
-    setUrl('');
-    setKeyword('');
-    setIntervalValue('30');
-    setIntervalUnit('minutes');
-    setSelectedSignals(['HTTP']);
-    setHasStarted(false);
-    setTouchedName(false);
-    setTouchedUrl(false);
-    setTouchedKeyword(false);
-    setTouchedInterval(false);
-    setWasAdded(true);
-    window.setTimeout(() => setWasAdded(false), 2000);
   };
 
   const handleUrlPaste = (event: ClipboardEvent<HTMLInputElement>) => {
     const pastedText = event.clipboardData.getData('text').trim();
     if (name.trim() || !/^https?:\/\//.test(pastedText)) return;
-
     try {
       setName(new URL(pastedText).hostname);
     } catch {
@@ -117,83 +97,66 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
   };
 
   const hasErrors = nameError !== null || urlError !== null || keywordError !== null || intervalError !== null;
-  const isBasicValid = Boolean(name.trim()) && name.length <= 100 && /^https?:\/\/.+\..+/.test(url);
-  const showAdvancedOptions = hasStarted && isBasicValid;
 
   return (
-    <form
-      className={`monitor-form${hasStarted ? ' expanded' : ' collapsed'}${showAdvancedOptions ? ' advanced' : ' basic'}`}
-      onSubmit={handleSubmit}
-    >
-      {!hasStarted && (
-        <div className="monitor-start-panel">
-          <p className="landing-kicker">Command center</p>
-          <h2>Start a precision monitor</h2>
-          <p>Add the URL, choose only the signals you need, and set the exact check frequency.</p>
-        </div>
-      )}
-
-      {!hasStarted && (
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="primary start-monitor-button"
-        >
-          {wasAdded ? 'Added' : isLoading ? 'Opening...' : 'Start monitoring'}
-        </button>
-      )}
-
-      {hasStarted && (
-        <>
-          <div className="monitor-field site-name-field">
-            <label htmlFor="site-name">Site name</label>
-            <input
-              id="site-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+      display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
+      <div style={{
+        background: '#FFFFFF', padding: 32, borderRadius: 12,
+        width: '100%', maxWidth: 760, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 30px rgba(0,0,0,0.1)'
+      }}>
+        <h2 style={{ margin: '0 0 24px 0', fontSize: 20, color: '#111827' }}>Add new monitor</h2>
+        
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Site name</label>
+            <input 
+              value={name} 
+              onChange={e => setName(e.target.value)}
               onBlur={() => setTouchedName(true)}
-              placeholder="My Website"
+              placeholder="e.g. My Website"
+              required
+              style={{
+                padding: '10px 14px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
+                backgroundColor: '#FCFCFC', fontSize: 15, outline: 'none'
+              }}
             />
-            {nameError && touchedName && <div className="field-error">{nameError}</div>}
+            {nameError && touchedName && <div style={{ color: '#F56565', fontSize: 13 }}>{nameError}</div>}
           </div>
-
-          <div className="monitor-field site-url-field">
-            <label htmlFor="site-url">URL</label>
-            <input
-              id="site-url"
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: '#4B5563' }}>URL</label>
+            <input 
+              value={url} 
+              onChange={e => setUrl(e.target.value)}
               onBlur={() => setTouchedUrl(true)}
               onPaste={handleUrlPaste}
               placeholder="https://example.com"
+              type="url"
+              required
+              style={{
+                padding: '10px 14px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
+                backgroundColor: '#FCFCFC', fontSize: 15, outline: 'none'
+              }}
             />
-            {urlError && touchedUrl && <div className="field-error">{urlError}</div>}
+            {urlError && touchedUrl && <div style={{ color: '#F56565', fontSize: 13 }}>{urlError}</div>}
           </div>
 
-          <div className="monitor-submit-slot">
-            <button type="submit" disabled={isLoading || hasErrors} className="primary">
-              {wasAdded ? 'Added' : isLoading ? 'Adding...' : showAdvancedOptions ? 'Save monitor' : 'Continue'}
-            </button>
-          </div>
-        </>
-      )}
-
-      {showAdvancedOptions && (
-        <div className="monitor-options-panel">
-          <div>
-            <p className="landing-kicker">Choose signal checks</p>
-            <h2>What should this monitor check?</h2>
-            <p>Select one or many. Only the selected checks will run in the background.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>What should this monitor check?</div>
+              <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>Select one or many signals to track in the background.</div>
+            </div>
+            <SignalSelector selectedSignals={selectedSignals} onChange={setSelectedSignals} />
           </div>
 
-          <SignalSelector selectedSignals={selectedSignals} onChange={setSelectedSignals} />
-
-          <div className="interval-builder">
-            <label htmlFor="ping-interval-value">Check frequency</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Check frequency</label>
             <IntervalInput
-              id="ping-interval-value"
+              id="ping-interval-add"
               value={intervalValue}
               unit={intervalUnit}
               onChange={(v, u) => {
@@ -207,22 +170,42 @@ export function AddUrlForm({ onAdd, isLoading }: AddUrlFormProps) {
           </div>
 
           {selectedSignals.includes('KEYWORD') && (
-            <div className="keyword-field">
-              <label htmlFor="keyword-to-find">Keyword to find</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 500, color: '#4B5563' }}>Keyword to find</label>
               <input
-                id="keyword-to-find"
-                type="text"
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 onBlur={() => setTouchedKeyword(true)}
                 placeholder='e.g. "Add to cart"'
                 required
+                style={{
+                  padding: '10px 14px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
+                  backgroundColor: '#FCFCFC', fontSize: 15, outline: 'none'
+                }}
               />
-              {keywordError && touchedKeyword && <div className="field-error">{keywordError}</div>}
+              {keywordError && touchedKeyword && <div style={{ color: '#F56565', fontSize: 13 }}>{keywordError}</div>}
             </div>
           )}
-        </div>
-      )}
-    </form>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
+            <button 
+              type="button" 
+              className="outline-button" 
+              onClick={onClose}
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="primary"
+              disabled={isLoading || hasErrors}
+            >
+              {isLoading ? 'Saving...' : 'Start monitoring'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
