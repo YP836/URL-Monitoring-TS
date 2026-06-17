@@ -84,6 +84,14 @@ function getSignalLine(checkType: CheckType, allExtraData?: Record<string, unkno
   return null;
 }
 
+function getDomain(webAddress: string): string {
+  try {
+    return new URL(webAddress).hostname;
+  } catch {
+    return webAddress.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "").split('/')[0];
+  }
+}
+
 export function UrlCard({ url, onDelete, onInspect, extraData, lastPing }: UrlCardProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [flashStatus, setFlashStatus] = useState<'UP' | 'DOWN' | 'WARN' | null>(null);
@@ -92,6 +100,13 @@ export function UrlCard({ url, onDelete, onInspect, extraData, lastPing }: UrlCa
     .filter((checkType) => checkType !== 'HTTP')
     .map((checkType) => getSignalLine(checkType, extraData))
     .filter((line): line is { text: string; color: string } => line !== null);
+
+  const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
+  const domain = getDomain(url.web_address);
+
+  useEffect(() => {
+    setFaviconUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=64`);
+  }, [domain]);
 
   useEffect(() => {
     let timer: number;
@@ -153,13 +168,24 @@ export function UrlCard({ url, onDelete, onInspect, extraData, lastPing }: UrlCa
                   : undefined,
         }}
       >
-        <div className={styles.header}>
-          <div className={styles.name}>{url.name}</div>
+        <div className={styles.header} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {faviconUrl ? (
+            <img src={faviconUrl} alt={`${domain} logo`} style={{ width: 20, height: 20, borderRadius: '50%' }} onError={() => setFaviconUrl(null)} />
+          ) : (
+            <span style={{ fontSize: '1.2rem', color: '#9CA3AF' }}>dYO?</span>
+          )}
+          <div className={styles.name} style={{ flex: 1 }}>{url.name}</div>
           <StatusDot status={url.status} />
         </div>
         <div className={styles.address}>
-          <div style={{ marginBottom: 8 }}>{url.web_address}</div>
-          <Badge variant={getBadgeVariant(url.status)} label={url.status} />
+          <div className={styles.addressRow}>
+            <span className={styles.label}>URL :</span>
+            <span style={{ color: '#374151', fontSize: '0.85rem', fontWeight: 500 }}>{url.web_address}</span>
+          </div>
+          <div className={styles.addressRow} style={{ marginTop: 4 }}>
+            <span className={styles.label}>Status :</span>
+            <Badge variant={getBadgeVariant(url.status)} label={url.status} />
+          </div>
           {signalLines.map((signalLine) => (
             <div key={signalLine.text} className={styles.signalLine} style={{ color: signalLine.color }}>
               {signalLine.text}
@@ -167,29 +193,26 @@ export function UrlCard({ url, onDelete, onInspect, extraData, lastPing }: UrlCa
           ))}
         </div>
         <div className={styles.footer}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div className={styles.time}>Added: {timeAgo(url.created_at)}</div>
-            {lastPing && (
-              <Badge
-                variant={lastPing.status === 'UP' ? 'neutral' : 'danger'}
-                label={lastPing.status === 'UP' && lastPing.latency_ms !== null ? `${lastPing.latency_ms}ms` : 'timeout'}
-              />
-            )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button
-              className={styles.inspectBtn}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onInspect(url);
-              }}
-            >
-              View details
-            </button>
-            <button className={styles.deleteBtn} type="button" onClick={handleDeleteClick}>
-              Delete
-            </button>
+          <div className={styles.time}>Added: {timeAgo(url.created_at)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 8 }}>
+            <div style={{ fontWeight: 800, color: '#111827', fontSize: '0.85rem' }}>
+              {lastPing && lastPing.latency_ms !== null ? `${lastPing.latency_ms}ms` : ''}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                className={styles.inspectBtn}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onInspect(url);
+                }}
+              >
+                View details
+              </button>
+              <button className={styles.deleteBtn} type="button" onClick={handleDeleteClick}>
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       </div>
