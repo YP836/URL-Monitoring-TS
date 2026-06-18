@@ -35,54 +35,68 @@ def _status_to_is_up(status: str) -> bool:
     return status in {"UP", "WARN"}
 
 
-def _write_check_result(result: CheckResult) -> None:
+def _write_check_results(results: list[CheckResult]) -> None:
+    if not results:
+        return
+    url_id = results[0].url_id
+    
+    # Compute worst status
+    overall_status = "UP"
+    for r in results:
+        if r.status == "DOWN":
+            overall_status = "DOWN"
+        elif r.status == "WARN" and overall_status != "DOWN":
+            overall_status = "WARN"
+
     conn = None
     try:
         conn = _get_sync_conn()
         with conn.cursor() as cur:
-            try:
-                cur.execute(
-                    """
-                    INSERT INTO ping_history
-                        (url_id, checked_at, response_time_ms, status_code, is_up, check_type, extra_data)
-                    VALUES (%s, NOW(), %s, %s, %s, %s, %s)
-                    """,
-                    (
-                        result.url_id,
-                        result.latency_ms,
-                        result.extra_data.get("status_code"),
-                        _status_to_is_up(result.status),
-                        result.check_type,
-                        Json(result.extra_data),
-                    ),
-                )
-            except Exception:
-                conn.rollback()
-                cur.execute(
-                    """
-                    INSERT INTO ping_history
-                        (url_id, checked_at, response_time_ms, status_code, is_up)
-                    VALUES (%s, NOW(), %s, %s, %s)
-                    """,
-                    (
-                        result.url_id,
-                        result.latency_ms,
-                        result.extra_data.get("status_code"),
-                        _status_to_is_up(result.status),
-                    ),
-                )
+            for result in results:
+                try:
+                    cur.execute(
+                        """
+                        INSERT INTO ping_history
+                            (url_id, checked_at, response_time_ms, status_code, is_up, check_type, extra_data)
+                        VALUES (%s, NOW(), %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            result.url_id,
+                            result.latency_ms,
+                            result.extra_data.get("status_code"),
+                            _status_to_is_up(result.status),
+                            result.check_type,
+                            Json(result.extra_data),
+                        ),
+                    )
+                except Exception:
+                    conn.rollback()
+                    cur.execute(
+                        """
+                        INSERT INTO ping_history
+                            (url_id, checked_at, response_time_ms, status_code, is_up)
+                        VALUES (%s, NOW(), %s, %s, %s)
+                        """,
+                        (
+                            result.url_id,
+                            result.latency_ms,
+                            result.extra_data.get("status_code"),
+                            _status_to_is_up(result.status),
+                        ),
+                    )
+            
             cur.execute(
                 "UPDATE urls SET status = %s, last_pinged_at = NOW() WHERE id = %s",
-                (result.status, result.url_id),
+                (overall_status, url_id),
             )
         conn.commit()
     except Exception:
-        logger.exception("[ping_url] Failed to write ping result url_id=%s", result.url_id)
+        logger.exception("[ping_url] Failed to write ping results url_id=%s", url_id)
         if conn is not None:
             try:
                 conn.rollback()
             except Exception:
-                logger.exception("[ping_url] Failed to rollback url_id=%s", result.url_id)
+                pass
     finally:
         if conn is not None:
             conn.close()
@@ -155,30 +169,35 @@ def ping_url(
     keyword: str | None = None,
 ) -> dict:
     try:
-        result = _run_check(url_id, web_address, check_type, keyword)
+        results = []
+        for ct in _split_check_types(check_type):
+            results.append(_run_check(url_id, web_address, ct, keyword))
     except Exception as exc:
         raise self.retry(exc=exc)
 
-    payload = {
-        "url_id": result.url_id,
-        "status": result.status,
-        "latency_ms": result.latency_ms,
-        "check_type": result.check_type,
-        "extra_data": result.extra_data,
-        "checked_at": result.checked_at,
-    }
+    _write_check_results(results)
+    
+    payloads = []
+    for result in results:
+        payload = {
+            "url_id": result.url_id,
+            "status": result.status,
+            "latency_ms": result.latency_ms,
+            "check_type": result.check_type,
+            "extra_data": result.extra_data,
+            "checked_at": result.checked_at,
+        }
+        _publish_ping_result(payload)
+        payloads.append(payload)
 
-    _write_check_result(result)
-    _publish_ping_result(payload)
-
-    logger.info(
-        "[ping_url] url_id=%s check_type=%s status=%s latency=%sms",
-        result.url_id,
-        result.check_type,
-        result.status,
-        result.latency_ms,
-    )
-    return payload
+        logger.info(
+            "[ping_url] url_id=%s check_type=%s status=%s latency=%sms",
+            result.url_id,
+            result.check_type,
+            result.status,
+            result.latency_ms,
+        )
+    return {"results": payloads}
 
 
 @celery_app.task(name="app.worker.tasks.schedule_ping_tasks")
@@ -210,13 +229,11 @@ def schedule_ping_tasks() -> dict:
         web_address = row["web_address"] if isinstance(row, dict) else row[1]
         check_type = row["check_type"] if isinstance(row, dict) else row[2]
         keyword = row["keyword_to_find"] if isinstance(row, dict) else row[3]
-        for i, selected_check_type in enumerate(_split_check_types(check_type)):
-            ping_url.apply_async(
-                args=[url_id, web_address, selected_check_type, keyword], 
-                expires=25,
-                countdown=i * 2
-            )
-            count += 1
+        ping_url.apply_async(
+            args=[url_id, web_address, check_type, keyword], 
+            expires=25,
+        )
+        count += 1
 
     logger.info("[schedule_ping_tasks] Enqueued %s ping tasks", count)
     return {"enqueued": count, "timestamp": datetime.utcnow().isoformat()}

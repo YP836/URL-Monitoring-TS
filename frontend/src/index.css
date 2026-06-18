@@ -10,7 +10,7 @@ body,
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 15px;
   color: #111827;
   background: #FCFCFC;
@@ -1292,7 +1292,7 @@ button.primary:disabled {
 .app-shell {
   height: 100vh;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   color: #111827;
   background:
     radial-gradient(circle at 12% 8%, rgba(255, 127, 80, 0.13), transparent 28%),
@@ -1329,35 +1329,21 @@ button.primary:disabled {
   animation: console-sheen 9s ease-in-out infinite;
 }
 
-.topbar {
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  color: #111827;
-  border-bottom: 1px solid rgba(255, 127, 80, 0.18);
-  background:
-    radial-gradient(circle at 8% 0%, rgba(255, 127, 80, 0.12), transparent 28%),
-    linear-gradient(90deg, rgba(255, 247, 243, 0.94), rgba(255, 255, 255, 0.88), rgba(255, 239, 232, 0.8));
-  box-shadow: 0 14px 40px rgba(245, 101, 101, 0.1);
-  backdrop-filter: blur(18px);
-}
-
-.topbar-brand {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.25rem;
-  letter-spacing: 0;
+.sidebar-brand {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 1.15rem;
   color: #111827;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
-.topbar-brand::before {
+.sidebar-brand::before {
   content: "U";
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: inline-grid;
   place-items: center;
   border: 1px solid rgba(255, 127, 80, 0.36);
