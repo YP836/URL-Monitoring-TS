@@ -1,31 +1,55 @@
-import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Dashboard } from './pages/Dashboard';
 import { LandingPage } from './pages/LandingPage';
 import { LaunchPage } from './pages/LaunchPage';
 import { UrlDetailPage } from './pages/UrlDetailPage';
+import { LoginPage } from './pages/LoginPage';
+import { SignupPage } from './pages/SignupPage';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { token, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="center-state">Loading...</div>;
+  }
+  
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+}
 
 function App() {
   return (
     <ErrorBoundary fallback={<div>App crashed. <a href="/">Reload</a></div>}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/launch" element={<LaunchPage />} />
-          <Route path="/dashboard" element={<Dashboard view="home" />} />
-          <Route path="/monitors" element={<Dashboard view="monitors" />} />
-          <Route path="/incidents" element={<Dashboard view="incidents" />} />
-          <Route path="/status-pages" element={<Dashboard view="status-pages" />} />
-          <Route path="/maintenance" element={<Dashboard view="maintenance" />} />
-          <Route path="/alerts" element={<Dashboard view="alerts" />} />
-          <Route path="/reports" element={<Dashboard view="reports" />} />
-          <Route path="/integrations" element={<Dashboard view="integrations" />} />
-          <Route path="/settings" element={<Dashboard view="settings" />} />
-          <Route path="/urls/:id" element={<UrlDetailPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/launch" element={<LaunchPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard view="home" /></ProtectedRoute>} />
+            <Route path="/monitors" element={<ProtectedRoute><Dashboard view="monitors" /></ProtectedRoute>} />
+            <Route path="/incidents" element={<ProtectedRoute><Dashboard view="incidents" /></ProtectedRoute>} />
+            <Route path="/status-pages" element={<ProtectedRoute><Dashboard view="status-pages" /></ProtectedRoute>} />
+            <Route path="/maintenance" element={<ProtectedRoute><Dashboard view="maintenance" /></ProtectedRoute>} />
+            <Route path="/alerts" element={<ProtectedRoute><Dashboard view="alerts" /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Dashboard view="reports" /></ProtectedRoute>} />
+            <Route path="/integrations" element={<ProtectedRoute><Dashboard view="integrations" /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Dashboard view="settings" /></ProtectedRoute>} />
+            <Route path="/urls/:id" element={<ProtectedRoute><UrlDetailPage /></ProtectedRoute>} />
+            
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

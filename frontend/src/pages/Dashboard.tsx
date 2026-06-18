@@ -10,7 +10,7 @@ import { useUrls } from '../hooks/useUrls';
 import { buildWsUrl, useWebSocket } from '../hooks/useWebSocket';
 import { useLiveStatus } from '../hooks/useLiveStatus';
 import { URLItem, URLStatus } from '../types';
-import { DEMO_MONITORS, FleetMonitor } from '../data/demoMonitors';
+import { FleetMonitor } from '../data/demoMonitors';
 
 export type OperationsView =
   | 'home'
@@ -194,6 +194,25 @@ function SourcePill({ source }: { source: 'live' | 'demo' }) {
   return <span className={`ops-source-pill ${source}`}>{source === 'live' ? 'Live' : 'Demo'}</span>;
 }
 
+export function Favicon({ url, size = 16 }: { url: string; size?: number }) {
+  const [error, setError] = useState(false);
+  if (!url || error) return null;
+  let domain = '';
+  try {
+    domain = new URL(url).hostname;
+  } catch (e) {
+    return null;
+  }
+  return (
+    <img 
+      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`} 
+      alt="" 
+      style={{ width: size, height: size, borderRadius: '50%', display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', flexShrink: 0 }} 
+      onError={() => setError(true)} 
+    />
+  );
+}
+
 function FleetTable({ monitors, onInspect }: { monitors: FleetMonitor[]; onInspect: (id: number) => void }) {
   return (
     <div className="ops-table-wrap">
@@ -215,7 +234,7 @@ function FleetTable({ monitors, onInspect }: { monitors: FleetMonitor[]; onInspe
             <tr key={monitor.id}>
               <td>
                 <div className="ops-monitor-cell">
-                  <strong>{monitor.name}</strong>
+                  <strong><Favicon url={monitor.web_address} />{monitor.name}</strong>
                   <span>{monitor.web_address}</span>
                   <div className="ops-mobile-row">
                     <StatusPill status={monitor.status} />
@@ -343,26 +362,7 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
   }, [lastMessage]);
 
   const fleetMonitors = useMemo<FleetMonitor[]>(() => {
-    const liveFleet = liveUrls.map((url) => toLiveFleetMonitor(url, lastPingMap));
-    const demoNeeded = Math.max(15 - liveFleet.length, 0);
-    const demoFleet: FleetMonitor[] = DEMO_MONITORS.slice(0, demoNeeded).map((monitor) => ({
-      id: monitor.id,
-      name: monitor.name,
-      web_address: monitor.web_address,
-      status: monitor.status,
-      source: 'demo',
-      latency_ms: monitor.latency_ms,
-      p95_latency_ms: monitor.p95_latency_ms,
-      uptime_pct: monitor.uptime_pct,
-      region: monitor.region,
-      owner: monitor.owner,
-      last_checked_at: monitor.last_checked_at,
-      next_check: monitor.next_check,
-      check_type: monitor.check_type,
-      incident_note: monitor.incident_note,
-    }));
-
-    return [...liveFleet, ...demoFleet];
+    return liveUrls.map((url) => toLiveFleetMonitor(url, lastPingMap));
   }, [lastPingMap, liveUrls]);
 
   const metrics = useMemo(() => {

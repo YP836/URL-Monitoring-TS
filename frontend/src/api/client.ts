@@ -10,6 +10,34 @@ const client = axios.create({
   },
 });
 
+client.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const apiFetch = async (path: string, options?: any) => {
+  const response = await client(path, options);
+  return response.data;
+};
+
+export const loginUser = async (data: any) => {
+  const params = new URLSearchParams();
+  params.append('username', data.username);
+  params.append('password', data.password);
+  const response = await client.post('/api/v1/auth/login', params, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  });
+  return response.data;
+};
+
+export const signupUser = async (data: any) => {
+  const response = await client.post('/api/v1/auth/signup', data);
+  return response.data;
+};
+
 export const getUrls = async (): Promise<URLItem[]> => {
   const response = await client.get<URLItem[]>('/api/v1/urls');
   return response.data;

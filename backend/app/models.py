@@ -1,8 +1,26 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, HttpUrl, model_validator
+from pydantic import BaseModel, EmailStr, Field, HttpUrl, model_validator
 
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: str | None = None
+
+class UserCreate(BaseModel):
+    full_name: str
+    email: EmailStr
+    password: str
+
+class UserRead(BaseModel):
+    id: int
+    full_name: str
+    email: EmailStr
+    created_at: datetime
 
 CHECK_TYPES = {"HTTP", "SSL_EXPIRY", "TTFB", "KEYWORD", "DOWNTIME_DURATION", "ERROR_RATE"}
 

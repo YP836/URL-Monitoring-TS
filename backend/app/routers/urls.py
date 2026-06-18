@@ -2,7 +2,10 @@ import json
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Annotated
+from ..auth import get_current_user
+from ..models import UserRead
 
 from ..database import get_connection
 from ..models import PingHistoryRead, URLCreate, URLDetail, URLExtraData, URLRead, URLUpdate
@@ -31,7 +34,7 @@ def _split_check_types(value: str | None) -> list[str]:
 
 
 @router.get("/urls", response_model=list[URLRead])
-async def list_urls() -> list[URLRead]:
+async def list_urls(current_user: Annotated[UserRead, Depends(get_current_user)]) -> list[URLRead]:
     """Retrieve all monitored URLs."""
     try:
         async with get_connection() as conn:
@@ -40,17 +43,17 @@ async def list_urls() -> list[URLRead]:
                 SELECT
                     id, web_address, name, status, created_at, check_type, keyword_to_find,
                     check_interval_seconds, ping_interval_seconds
-                FROM urls
+                FROM urls WHERE user_id = $1
                 ORDER BY created_at DESC
                 """
-            )
+            , current_user.id)
             return [URLRead(**dict(row)) for row in rows]
     except Exception:
         return list(_mock_urls.values())
 
 
 @router.post("/urls", response_model=URLRead, status_code=status.HTTP_201_CREATED)
-async def create_url(payload: URLCreate) -> URLRead:
+async def create_url(payload: URLCreate, current_user: Annotated[UserRead, Depends(get_current_user)]) -> URLRead:
     """Add a new URL to monitor."""
     global _mock_id_counter
 
@@ -59,8 +62,8 @@ async def create_url(payload: URLCreate) -> URLRead:
     try:
         async with get_connection() as conn:
             existing = await conn.fetchval(
-                "SELECT id FROM urls WHERE web_address = $1",
-                web_address,
+                "SELECT id FROM urls WHERE web_address = $1 AND user_id = $2",
+                web_address, current_user.id
             )
             if existing:
                 raise HTTPException(
@@ -72,14 +75,15 @@ async def create_url(payload: URLCreate) -> URLRead:
                 """
                 INSERT INTO urls
                     (
-                        web_address, name, status, created_at, check_type, keyword_to_find,
+                        user_id, web_address, name, status, created_at, check_type, keyword_to_find,
                         check_interval_seconds, ping_interval_seconds
                     )
-                VALUES ($1, $2, 'PENDING', NOW(), $3, $4, $5, $6)
+                VALUES ($1, $2, $3, 'PENDING', NOW(), $4, $5, $6, $7)
                 RETURNING
                     id, web_address, name, status, created_at, check_type, keyword_to_find,
                     check_interval_seconds, ping_interval_seconds
                 """,
+                current_user.id,
                 web_address,
                 payload.name,
                 payload.check_type,
@@ -117,7 +121,7 @@ async def create_url(payload: URLCreate) -> URLRead:
 
 
 @router.get("/urls/{url_id}", response_model=URLDetail)
-async def get_url_detail(url_id: int) -> URLDetail:
+async def get_url_detail(url_id: int, current_user: Annotated[UserRead, Depends(get_current_user)]) -> URLDetail:
     """Retrieve details for a specific URL including recent pings."""
     try:
         async with get_connection() as conn:
@@ -127,9 +131,10 @@ async def get_url_detail(url_id: int) -> URLDetail:
                     id, web_address, name, status, created_at, check_type, keyword_to_find,
                     check_interval_seconds, ping_interval_seconds
                 FROM urls
-                WHERE id = $1
+                WHERE id = $1 AND user_id = $2
                 """,
                 url_id,
+                current_user.id,
             )
             if not row:
                 raise HTTPException(status_code=404, detail="URL not found")
@@ -143,6 +148,7 @@ async def get_url_detail(url_id: int) -> URLDetail:
                 LIMIT 10
                 """,
                 url_id,
+                current_user.id,
             )
 
             return URLDetail(
@@ -160,7 +166,7 @@ async def get_url_detail(url_id: int) -> URLDetail:
     except HTTPException:
         raise
     except Exception:
-        url = _mock_urls.get(url_id)
+        url = _mock_urls.get(url_id, current_user.id)
         if not url:
             raise HTTPException(status_code=404, detail="URL not found")
 
@@ -168,11 +174,11 @@ async def get_url_detail(url_id: int) -> URLDetail:
 
 
 @router.get("/urls/{url_id}/extra", response_model=URLExtraData)
-async def get_url_extra_data(url_id: int) -> URLExtraData:
+async def get_url_extra_data(url_id: int, current_user: Annotated[UserRead, Depends(get_current_user)]) -> URLExtraData:
     """Retrieve the most recent extra_data payload for each selected URL check."""
     try:
         async with get_connection() as conn:
-            url_row = await conn.fetchrow("SELECT check_type FROM urls WHERE id = $1", url_id)
+            url_row = await conn.fetchrow("SELECT check_type FROM urls WHERE id = $1 AND user_id = $2", url_id, current_user.id)
             if not url_row:
                 raise HTTPException(status_code=404, detail="URL not found")
 
@@ -212,11 +218,11 @@ async def get_url_extra_data(url_id: int) -> URLExtraData:
 
 
 @router.put("/urls/{url_id}", response_model=URLRead)
-async def update_url(url_id: int, payload: URLUpdate) -> URLRead:
+async def update_url(url_id: int, payload: URLUpdate, current_user: Annotated[UserRead, Depends(get_current_user)]) -> URLRead:
     """Update mutable URL fields without changing its selected monitoring signals."""
     try:
         async with get_connection() as conn:
-            existing = await conn.fetchrow("SELECT * FROM urls WHERE id = $1", url_id)
+            existing = await conn.fetchrow("SELECT * FROM urls WHERE id = $1 AND user_id = $2", url_id, current_user.id)
             if not existing:
                 raise HTTPException(status_code=404, detail="URL not found")
 
@@ -232,7 +238,7 @@ async def update_url(url_id: int, payload: URLUpdate) -> URLRead:
                 """
                 UPDATE urls
                 SET web_address = $1, name = $2, ping_interval_seconds = $3, check_interval_seconds = $3
-                WHERE id = $4
+                WHERE id = $4 AND user_id = $5
                 RETURNING
                     id, web_address, name, status, created_at, check_type, keyword_to_find,
                     check_interval_seconds, ping_interval_seconds
@@ -241,12 +247,13 @@ async def update_url(url_id: int, payload: URLUpdate) -> URLRead:
                 new_name,
                 new_interval,
                 url_id,
+                current_user.id,
             )
             return URLRead(**dict(row))
     except HTTPException:
         raise
     except Exception:
-        url = _mock_urls.get(url_id)
+        url = _mock_urls.get(url_id, current_user.id)
         if not url:
             raise HTTPException(status_code=404, detail="URL not found")
 
@@ -262,11 +269,11 @@ async def update_url(url_id: int, payload: URLUpdate) -> URLRead:
 
 
 @router.delete("/urls/{url_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_url(url_id: int) -> None:
+async def delete_url(url_id: int, current_user: Annotated[UserRead, Depends(get_current_user)]) -> None:
     """Delete a monitored URL."""
     try:
         async with get_connection() as conn:
-            result = await conn.execute("DELETE FROM urls WHERE id = $1", url_id)
+            result = await conn.execute("DELETE FROM urls WHERE id = $1 AND user_id = $2", url_id, current_user.id)
             if result == "DELETE 0":
                 raise HTTPException(status_code=404, detail="URL not found")
             return

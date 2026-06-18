@@ -10,6 +10,7 @@ from .config import settings
 from . import database
 from .routers import urls as urls_router
 from .routers.ws import router as ws_router
+from .routers import auth as auth_router
 from app.redis_listener import redis_listener
 from app.websocket_manager import manager
 
@@ -61,5 +62,6 @@ async def healthz() -> dict:
     return {"status": "ok", "environment": settings.environment}
 
 
+app.include_router(auth_router.router)
 app.include_router(urls_router.router, prefix="/api/v1")
 app.include_router(ws_router)

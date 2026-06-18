@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { checkUrlNow, getUrlDetail, getUrlExtraData } from '../api/client';
+import modalStyles from '../components/urls/UrlCard.module.css';
 import { CheckType, PingHistoryRead, URLDetail } from '../types';
 import { PageLayout } from '../components/layout/PageLayout';
 import { Toast } from '../components/ui/Toast';
@@ -13,6 +15,7 @@ import { MetricKey } from '../components/stats/MetricChooser';
 import { StatsRow } from '../components/stats/StatsRow';
 import { UptimeBar } from '../components/charts/UptimeBar';
 import { LatencyChart } from '../components/charts/LatencyChart';
+import { Favicon } from './Dashboard';
 import { MonitorReportModal } from '../components/reports/MonitorReportModal';
 import { buildWsUrl, useWebSocket } from '../hooks/useWebSocket';
 function timeAgo(isoString: string): string {
@@ -60,6 +63,7 @@ export function UrlDetailPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [extraData, setExtraData] = useState<Record<string, unknown> | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const { lastMessage, isConnected, connectionError } = useWebSocket(buildWsUrl(import.meta.env.VITE_API_BASE_URL));
 
   useEffect(() => {
@@ -150,6 +154,7 @@ export function UrlDetailPage() {
               <div className="detail-title-row">
                 <StatusDot status={currentStatus} />
                 <h1>
+                  <Favicon url={url.web_address} size={28} />
                   {url.name}
                 </h1>
                 <span>Checked {livePings.length} times</span>
@@ -166,6 +171,14 @@ export function UrlDetailPage() {
               <button className="primary save-report-button" type="button" onClick={() => setIsReportOpen(true)}>
                 <DownloadIcon size={14} />
                 Save
+              </button>
+              <button 
+                className="outline-button" 
+                type="button" 
+                style={{ color: '#E24B4A', borderColor: '#E24B4A' }}
+                onClick={() => setIsConfirmingDelete(true)}
+              >
+                Delete
               </button>
             </div>
           </header>
@@ -187,6 +200,49 @@ export function UrlDetailPage() {
             )}
           </AnimatePresence>
         </>
+      )}
+      {createPortal(
+        <AnimatePresence>
+          {isConfirmingDelete && url && (
+            <motion.div
+              className={modalStyles.modalOverlay}
+              onClick={() => setIsConfirmingDelete(false)}
+              role="presentation"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+            >
+            <motion.div
+              className={modalStyles.confirmDialog}
+              role="dialog"
+              aria-modal="true"
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              initial={{ opacity: 0, y: 18, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <motion.div className={modalStyles.confirmIcon} initial={{ scale: 0.6, rotate: -18 }} animate={{ scale: 1, rotate: 0 }}>!</motion.div>
+              <h2 style={{ margin: 0, color: '#111827', fontSize: '1.35rem' }}>Delete monitor?</h2>
+              <p style={{ margin: '10px 0 0', color: '#4B5563', lineHeight: 1.55 }}>This will remove <strong>{url.name}</strong> and its saved monitoring history.</p>
+              <div className={modalStyles.dialogActions}>
+                <motion.button className={modalStyles.cancelBtn} type="button" onClick={() => setIsConfirmingDelete(false)}>Cancel</motion.button>
+                <motion.button className={modalStyles.confirmDeleteBtn} type="button" onClick={async () => {
+                  try {
+                    await import('../api/client').then(m => m.deleteUrl(Number(id)));
+                    navigate('/monitors');
+                  } catch (e) {
+                    setToast('Failed to delete monitor');
+                    setIsConfirmingDelete(false);
+                  }
+                }}>Delete</motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
       )}
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </PageLayout>

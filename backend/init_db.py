@@ -10,14 +10,31 @@ def init_db():
         conn.autocommit = True
         cur = conn.cursor()
         
+        print("Creating 'users' table...")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                full_name VARCHAR(150) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                hashed_password VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
         print("Creating 'urls' table...")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS urls (
                 id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
                 web_address VARCHAR(255) UNIQUE NOT NULL,
                 name VARCHAR(100) NOT NULL,
                 status VARCHAR(20) DEFAULT 'PENDING',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                check_type VARCHAR(160) NOT NULL DEFAULT 'HTTP',
+                keyword_to_find VARCHAR(255),
+                check_interval_seconds INTEGER NOT NULL DEFAULT 30,
+                ping_interval_seconds INTEGER NOT NULL DEFAULT 30,
+                last_pinged_at TIMESTAMPTZ
             )
         """)
         

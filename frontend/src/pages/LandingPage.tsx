@@ -150,10 +150,21 @@ export function LandingPage() {
             <span className="brand-glyph">U</span>
             <span>Uptime Monitor</span>
           </Link>
-          <div className="landing-nav-links">
+          <div className="landing-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <a href="#signals">Signals</a>
             <a href="#precision">Precision</a>
             <Link to="/launch">Console</Link>
+            <div style={{ width: '1px', height: '16px', backgroundColor: '#e5e7eb', margin: '0 8px' }} />
+            <Link to="/login" style={{ color: '#4b5563', textDecoration: 'none', fontWeight: 500 }}>Log in</Link>
+            <Link to="/signup" style={{ 
+              backgroundColor: '#FF6B4A', 
+              color: 'white', 
+              padding: '6px 14px', 
+              borderRadius: '6px',
+              fontWeight: 500,
+              textDecoration: 'none',
+              boxShadow: '0 2px 4px rgba(255, 107, 74, 0.2)'
+            }}>Sign up</Link>
           </div>
         </motion.nav>
 
@@ -190,16 +201,13 @@ export function LandingPage() {
             </motion.div>
             <motion.div className="map-pin pin-sin" whileHover={{ y: -4, scale: 1.04 }}>
               <span className="pin-dot" />
-              <div className="pin-label"><strong>Singapore</strong><br />Lat 20ms | Ok</div>
+              <div className="pin-label"><strong>Sydney</strong><br />Lat 20ms | Ok</div>
             </motion.div>
             <motion.div className="map-pin pin-sao" whileHover={{ y: -4, scale: 1.04 }}>
               <span className="pin-dot" />
               <div className="pin-label"><strong>Sao Paulo</strong><br />Lat 32ms | Ok</div>
             </motion.div>
-            <motion.div className="map-pin pin-syd" whileHover={{ y: -4, scale: 1.04 }}>
-              <span className="pin-dot" />
-              <div className="pin-label"><strong>Sydney</strong><br />Lat 28ms | Ok</div>
-            </motion.div>
+
 
             <div className="map-card card-global">
               <span>Global reach</span>

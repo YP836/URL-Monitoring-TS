@@ -47,3 +47,10 @@ export interface PingHistoryRead {
   check_type?: CheckType | null;
   extra_data?: Record<string, unknown> | null;
 }
+
+export interface UserRead {
+  id: number;
+  full_name: string;
+  email: string;
+  created_at: string;
+}

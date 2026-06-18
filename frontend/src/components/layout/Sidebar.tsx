@@ -1,5 +1,6 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { BookIcon } from '../ui/Icons';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
   urlCount: number;
@@ -34,7 +35,14 @@ const navGroups = [
 
 export function Sidebar({ urlCount }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const isUrlDetail = location.pathname.startsWith('/urls/');
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <aside className="sidebar">
@@ -75,8 +83,16 @@ export function Sidebar({ urlCount }: SidebarProps) {
           <BookIcon size={15} />
           API Docs
         </a>
-        <div className="sidebar-version">v0.2.0 operational</div>
+        <button
+          onClick={handleLogout}
+          className="sidebar-doc-link"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: '100%', textAlign: 'left', marginTop: '12px' }}
+        >
+          <i className="ti ti-logout" style={{ marginRight: '8px' }} />
+          Log out
+        </button>
       </div>
     </aside>
   );
 }
+
