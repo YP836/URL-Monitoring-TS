@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, BarChart2 } from 'lucide-react';
-import { signupUser, loginUser } from '../api/client';
+import { getApiErrorMessage, signupUser, loginUser } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../components/ui/Toast';
+import { isValidEmail } from '../utils/validation';
 
 export function SignupPage() {
   const [fullName, setFullName] = useState('');
@@ -17,14 +18,21 @@ export function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const normalizedEmail = email.trim();
+    if (!isValidEmail(normalizedEmail)) {
+      setError('Enter a valid email address.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await signupUser({ full_name: fullName, email, password });
-      const data = await loginUser({ username: email, password });
+      await signupUser({ full_name: fullName.trim(), email: normalizedEmail, password });
+      const data = await loginUser({ username: normalizedEmail, password });
       login(data.access_token);
-      navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to sign up');
+      navigate('/dashboard');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to sign up'));
     } finally {
       setLoading(false);
     }
@@ -80,6 +88,7 @@ export function SignupPage() {
                   placeholder="you@example.com" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  aria-invalid={error === 'Enter a valid email address.'}
                   required 
                 />
               </div>

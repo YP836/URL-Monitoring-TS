@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { checkUrlNow, getUrlDetail, getUrlExtraData } from '../api/client';
+import { checkUrlNow, getApiErrorMessage, getUrlDetail, getUrlExtraData } from '../api/client';
 import modalStyles from '../components/urls/UrlCard.module.css';
 import { CheckType, PingHistoryRead, URLDetail } from '../types';
 import { PageLayout } from '../components/layout/PageLayout';
@@ -18,16 +18,7 @@ import { LatencyChart } from '../components/charts/LatencyChart';
 import { Favicon } from './Dashboard';
 import { MonitorReportModal } from '../components/reports/MonitorReportModal';
 import { buildWsUrl, useWebSocket } from '../hooks/useWebSocket';
-function timeAgo(isoString: string): string {
-  const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
-}
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Failed to load URL details';
-}
+import { timeAgo } from '../utils/dates';
 
 function splitCheckTypes(checkType: string | undefined): CheckType[] {
   const knownChecks: CheckType[] = ['HTTP', 'SSL_EXPIRY', 'TTFB', 'KEYWORD', 'DOWNTIME_DURATION', 'ERROR_RATE'];
@@ -55,6 +46,8 @@ function metricsForCheckType(checkType: string | undefined): MetricKey[] {
 export function UrlDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const urlId = Number(id);
+  const hasValidUrlId = Number.isInteger(urlId) && urlId > 0;
   const [url, setUrl] = useState<URLDetail | null>(null);
   const [livePings, setLivePings] = useState<PingHistoryRead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,10 +60,18 @@ export function UrlDetailPage() {
   const { lastMessage, isConnected, connectionError } = useWebSocket(buildWsUrl(import.meta.env.VITE_API_BASE_URL));
 
   useEffect(() => {
-    if (!id) return;
+    if (!hasValidUrlId) {
+      setUrl(null);
+      setLivePings([]);
+      setExtraData(null);
+      setError('This monitor link is invalid.');
+      setIsLoading(false);
+      return;
+    }
+
     let mounted = true;
     setIsLoading(true);
-    getUrlDetail(Number(id))
+    getUrlDetail(urlId)
       .then(data => {
         if (!mounted) return;
         setUrl(data);
@@ -79,16 +80,16 @@ export function UrlDetailPage() {
         setError(null);
         document.title = `${data.name} - Uptime Monitor`;
       })
-      .catch(err => mounted && setError(getErrorMessage(err)))
+      .catch(err => mounted && setError(getApiErrorMessage(err, 'Failed to load URL details')))
       .finally(() => mounted && setIsLoading(false));
     return () => { mounted = false; };
-  }, [id]);
+  }, [hasValidUrlId, urlId]);
 
   useEffect(() => {
-    if (!id) return;
+    if (!hasValidUrlId) return;
     let mounted = true;
 
-    getUrlExtraData(Number(id))
+    getUrlExtraData(urlId)
       .then((data) => {
         if (mounted) setExtraData(data.extra_data);
       })
@@ -99,10 +100,10 @@ export function UrlDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [hasValidUrlId, urlId]);
 
   useEffect(() => {
-    if (!lastMessage || lastMessage.url_id !== Number(id)) return;
+    if (!lastMessage || lastMessage.url_id !== urlId) return;
     const nextPing: PingHistoryRead = {
       id: Date.now(),
       url_id: lastMessage.url_id,
@@ -118,23 +119,34 @@ export function UrlDetailPage() {
         [lastMessage.check_type as string]: lastMessage.extra_data as Record<string, unknown>,
       }));
     }
-  }, [id, lastMessage]);
+  }, [urlId, lastMessage]);
   const currentStatus =
-    lastMessage?.url_id === Number(id)
+    lastMessage?.url_id === urlId
       ? lastMessage.status
       : url?.status ?? (livePings[0]?.is_up === false ? 'DOWN' : 'PENDING');
-  const showNotFound = !isLoading && error?.toLowerCase().includes('404');
+  const showNotFound = !isLoading && !!error && error.toLowerCase().includes('not found');
   const visibleMetrics = metricsForCheckType(url?.check_type);
   const selectedChecks = splitCheckTypes(url?.check_type);
   const showLatencyChart = selectedChecks.includes('HTTP');
   const showUptimeChart = selectedChecks.includes('HTTP');
   const handleCheckNow = async () => {
-    if (!id) return;
+    if (!hasValidUrlId) return;
     setIsChecking(true);
     try {
-      await checkUrlNow(Number(id));
+      await checkUrlNow(urlId);
+      const data = await getUrlDetail(urlId);
+      setUrl(data);
+      setLivePings(data.recent_pings);
+      setExtraData(data.recent_pings[0]?.extra_data ?? null);
+      try {
+        const latestExtra = await getUrlExtraData(urlId);
+        setExtraData(latestExtra.extra_data);
+      } catch {
+        // A plain HTTP-only monitor may not have signal-specific extra data yet.
+      }
+      setToast('Check complete');
     } catch (err) {
-      setToast(getErrorMessage(err));
+      setToast(getApiErrorMessage(err, 'Failed to run check'));
     } finally {
       setIsChecking(false);
     }
@@ -145,7 +157,7 @@ export function UrlDetailPage() {
         &larr; Back to dashboard
       </button>
       {isLoading && <DetailSkeleton />}
-      {showNotFound && <CenteredMessage title="URL not found" />}
+      {showNotFound && <CenteredMessage title="Monitor not available" detail="This monitor was not found for the current account. Go back to the dashboard and choose a monitor from this workspace." />}
       {!isLoading && error && !showNotFound && <CenteredMessage title="Failed to load URL details" detail={error} />}
       {!isLoading && url && (
         <>
@@ -230,7 +242,7 @@ export function UrlDetailPage() {
                 <motion.button className={modalStyles.cancelBtn} type="button" onClick={() => setIsConfirmingDelete(false)}>Cancel</motion.button>
                 <motion.button className={modalStyles.confirmDeleteBtn} type="button" onClick={async () => {
                   try {
-                    await import('../api/client').then(m => m.deleteUrl(Number(id)));
+                    await import('../api/client').then(m => m.deleteUrl(urlId));
                     navigate('/monitors');
                   } catch (e) {
                     setToast('Failed to delete monitor');

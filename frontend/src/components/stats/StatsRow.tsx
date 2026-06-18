@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { CheckType, PingHistoryRead } from '../../types';
 import { MetricKey } from './MetricChooser';
+import { parseApiDate, timeAgo } from '../../utils/dates';
 
 interface StatsRowProps {
   pings: PingHistoryRead[];
@@ -29,20 +30,12 @@ function computeUptime30d(pings: PingHistoryRead[]): string {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const recentPings = pings.filter((ping) => new Date(ping.checked_at) >= thirtyDaysAgo);
+  const recentPings = pings.filter((ping) => parseApiDate(ping.checked_at) >= thirtyDaysAgo);
   if (recentPings.length === 0) return '-';
 
   const upCount = recentPings.filter((ping) => ping.is_up).length;
   const pct = (upCount / recentPings.length) * 100;
   return `${pct.toFixed(1)}%`;
-}
-
-function timeAgo(isoString: string): string {
-  const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -75,7 +68,7 @@ export function StatsRow({
   const avgLatency = computeAvgLatency(pings);
   const p95Latency = computeP95Latency(pings);
   const uptime30d = computeUptime30d(pings);
-  const sortedPings = [...pings].sort((a, b) => new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime());
+  const sortedPings = [...pings].sort((a, b) => parseApiDate(b.checked_at).getTime() - parseApiDate(a.checked_at).getTime());
   const lastChecked = sortedPings.length > 0 ? timeAgo(sortedPings[0].checked_at) : 'Never';
   const sslData = getExtraDataForCheck('SSL_EXPIRY', extraData);
   const ttfbData = getExtraDataForCheck('TTFB', extraData);

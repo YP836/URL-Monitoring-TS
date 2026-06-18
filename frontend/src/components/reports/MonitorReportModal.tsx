@@ -5,6 +5,7 @@ import { Badge } from '../ui/Badge';
 import { DownloadIcon } from '../ui/Icons';
 import { UptimeBar } from '../charts/UptimeBar';
 import { LatencyChart } from '../charts/LatencyChart';
+import { parseApiDate, timeAgo } from '../../utils/dates';
 
 type ReportSection = 'summary' | 'signals' | 'uptime' | 'latency' | 'checks';
 
@@ -78,14 +79,6 @@ function computeUptime(pings: PingHistoryRead[]): string {
   if (pings.length === 0) return '-';
   const upCount = pings.filter((ping) => ping.is_up).length;
   return `${((upCount / pings.length) * 100).toFixed(1)}%`;
-}
-
-function timeAgo(isoString: string): string {
-  const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
 }
 
 function getBadgeVariant(status: URLStatus) {
@@ -242,7 +235,7 @@ export function MonitorReportModal({
   }, [onClose]);
 
   const sortedPings = useMemo(
-    () => [...pings].sort((a, b) => new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime()),
+    () => [...pings].sort((a, b) => parseApiDate(b.checked_at).getTime() - parseApiDate(a.checked_at).getTime()),
     [pings],
   );
   const latestPing = sortedPings[0];

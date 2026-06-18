@@ -21,10 +21,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token) {
       localStorage.setItem('token', token);
       // Fetch user profile to verify token
-      apiFetch('/auth/me')
-        .then((data: any) => {
-          setUser(data as UserRead);
-        })
+      apiFetch<UserRead>('/api/v1/auth/me')
+        .then(setUser)
         .catch(() => {
           logout();
         })
@@ -39,10 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const login = (newToken: string) => {
+    localStorage.setItem('token', newToken);
     setToken(newToken);
   };
 
   const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
     setToken(null);
   };
 

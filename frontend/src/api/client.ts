@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { URLItem, AddURLPayload, URLDetail } from '../types';
+import axios, { AxiosRequestConfig } from 'axios';
+import { URLItem, AddURLPayload, URLDetail, UserRead } from '../types';
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -18,23 +18,110 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-export const apiFetch = async (path: string, options?: any) => {
-  const response = await client(path, options);
-  return response.data;
+interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+interface SignupRequest {
+  full_name: string;
+  email: string;
+  password: string;
+}
+
+interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}
+
+type ApiValidationItem = {
+  loc?: Array<string | number>;
+  msg?: string;
+  type?: string;
 };
 
-export const loginUser = async (data: any) => {
+type ApiErrorPayload = {
+  detail?: string | ApiValidationItem[] | Record<string, unknown>;
+  message?: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeValidationMessage(item: ApiValidationItem): string {
+  const field = item.loc?.filter((part) => part !== 'body').join(' ');
+  const message = item.msg ?? 'Invalid value';
+  return field ? `${field}: ${message}` : message;
+}
+
+export function getApiErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
+  if (axios.isAxiosError<ApiErrorPayload>(error)) {
+    if (error.code === 'ERR_NETWORK') {
+      return 'Cannot reach the backend. Please make sure the API server is running.';
+    }
+
+    const status = error.response?.status;
+    const detail = error.response?.data?.detail;
+
+    if (typeof detail === 'string') {
+      return detail;
+    }
+
+    if (Array.isArray(detail)) {
+      const messages = detail.map(normalizeValidationMessage).filter(Boolean);
+      return messages.length > 0 ? messages.join(' ') : fallback;
+    }
+
+    if (isRecord(detail)) {
+      const message = detail.message;
+      return typeof message === 'string' ? message : fallback;
+    }
+
+    const responseMessage = error.response?.data?.message;
+    if (typeof responseMessage === 'string') {
+      return responseMessage;
+    }
+
+    if (status === 401) {
+      return 'Your session expired. Please sign in again.';
+    }
+
+    if (status === 404) {
+      return 'This monitor was not found for the current account.';
+    }
+
+    if (status === 422) {
+      return 'Please check the form fields and try again.';
+    }
+
+    return error.message || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
+export const apiFetch = async <T = unknown>(path: string, options?: AxiosRequestConfig): Promise<T> => {
+  const response = await client(path, options);
+  return response.data as T;
+};
+
+export const loginUser = async (data: LoginRequest): Promise<TokenResponse> => {
   const params = new URLSearchParams();
   params.append('username', data.username);
   params.append('password', data.password);
-  const response = await client.post('/api/v1/auth/login', params, {
+  const response = await client.post<TokenResponse>('/api/v1/auth/login', params, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
   });
   return response.data;
 };
 
-export const signupUser = async (data: any) => {
-  const response = await client.post('/api/v1/auth/signup', data);
+export const signupUser = async (data: SignupRequest): Promise<UserRead> => {
+  const response = await client.post<UserRead>('/api/v1/auth/signup', data);
   return response.data;
 };
 
@@ -91,6 +178,6 @@ export const getUrlExtraData = async (
   return response.data;
 };
 
-export const checkUrlNow = async (_id: number): Promise<void> => {
-  throw new Error('Not implemented - coming in Phase 6');
+export const checkUrlNow = async (id: number): Promise<void> => {
+  await client.post(`/api/v1/urls/${id}/check`, undefined, { timeout: 60000 });
 };

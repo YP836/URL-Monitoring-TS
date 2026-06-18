@@ -25,7 +25,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <ErrorBoundary fallback={<div>App crashed. <a href="/">Reload</a></div>}>
+    <ErrorBoundary fallback={<AppCrashFallback />}>
       <AuthProvider>
         <BrowserRouter>
           <Routes>
@@ -51,6 +51,22 @@ function App() {
         </BrowserRouter>
       </AuthProvider>
     </ErrorBoundary>
+  );
+}
+
+function AppCrashFallback() {
+  return (
+    <div className="center-state" style={{ minHeight: '100vh' }}>
+      <div className="state-card">
+        <div style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>Something needs a refresh</div>
+        <p style={{ margin: '8px 0 16px', color: '#667085' }}>
+          The app hit an unexpected state. Your saved monitors are safe.
+        </p>
+        <button className="primary" type="button" onClick={() => window.location.reload()}>
+          Reload page
+        </button>
+      </div>
+    </div>
   );
 }
 
