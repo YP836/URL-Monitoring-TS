@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token) {
       localStorage.setItem('token', token);
       // Fetch user profile to verify token
-      apiFetch('/auth/me')
+      apiFetch('/api/v1/auth/me')
         .then((data: any) => {
           setUser(data as UserRead);
         })

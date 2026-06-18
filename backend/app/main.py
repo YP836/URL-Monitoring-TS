@@ -41,6 +41,9 @@ def api_key_dependency(connection: HTTPConnection) -> None:
     if connection.scope["method"] == "GET" and connection.url.path in exempt_paths:
         return
 
+    if connection.scope["method"] == "OPTIONS":
+        return
+
     api_key = connection.headers.get("X-API-Key")
     if not api_key or api_key != settings.api_key:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing API key")

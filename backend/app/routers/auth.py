@@ -34,23 +34,29 @@ async def signup(user: UserCreate):
 
 @router.post("/login", response_model=Token)
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    async with get_connection() as conn:
-        user = await conn.fetchrow(
-            "SELECT id, email, hashed_password FROM users WHERE email = $1",
-            form_data.username
-        )
-        if not user or not verify_password(form_data.password, user["hashed_password"]):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
+    try:
+        async with get_connection() as conn:
+            user = await conn.fetchrow(
+                "SELECT id, email, hashed_password FROM users WHERE email = $1",
+                form_data.username
             )
-        
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user["email"]}, expires_delta=access_token_expires
-        )
-        return Token(access_token=access_token, token_type="bearer")
+            if not user or not verify_password(form_data.password, user["hashed_password"]):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Incorrect email or password",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(
+                data={"sub": user["email"]}, expires_delta=access_token_expires
+            )
+            return Token(access_token=access_token, token_type="bearer")
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=400, detail=traceback.format_exc())
 
 @router.get("/me", response_model=UserRead)
 async def read_users_me(current_user: Annotated[UserRead, Depends(get_current_user)]):

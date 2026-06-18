@@ -148,7 +148,6 @@ async def get_url_detail(url_id: int, current_user: Annotated[UserRead, Depends(
                 LIMIT 10
                 """,
                 url_id,
-                current_user.id,
             )
 
             return URLDetail(
@@ -166,11 +165,7 @@ async def get_url_detail(url_id: int, current_user: Annotated[UserRead, Depends(
     except HTTPException:
         raise
     except Exception:
-        url = _mock_urls.get(url_id, current_user.id)
-        if not url:
-            raise HTTPException(status_code=404, detail="URL not found")
-
-        return URLDetail(**url.model_dump(), recent_pings=[])
+        raise HTTPException(status_code=500, detail="Internal server error while fetching URL detail")
 
 
 @router.get("/urls/{url_id}/extra", response_model=URLExtraData)

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, BarChart2 } from 'lucide-react';
+import { Mail, Lock, User, BarChart2, Eye, EyeOff } from 'lucide-react';
 import { signupUser, loginUser } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../components/ui/Toast';
@@ -11,6 +11,7 @@ export function SignupPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -22,7 +23,7 @@ export function SignupPage() {
       await signupUser({ full_name: fullName, email, password });
       const data = await loginUser({ username: email, password });
       login(data.access_token);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to sign up');
     } finally {
@@ -90,7 +91,7 @@ export function SignupPage() {
               <div className="auth-input-wrapper">
                 <Lock size={16} className="auth-icon" />
                 <input 
-                  type="password" 
+                  type={showPassword ? 'text' : 'password'} 
                   className="auth-input" 
                   placeholder="Create a password" 
                   value={password}
@@ -98,6 +99,23 @@ export function SignupPage() {
                   required 
                   minLength={8}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '14px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#9ca3af',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: 0
+                  }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
               <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 6 }}>At least 8 characters</div>
             </div>
