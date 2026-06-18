@@ -145,7 +145,7 @@ async def get_url_detail(url_id: int, current_user: Annotated[UserRead, Depends(
                 FROM ping_history
                 WHERE url_id = $1
                 ORDER BY checked_at DESC
-                LIMIT 10
+                LIMIT 2000
                 """,
                 url_id,
             )

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
+import modalStyles from '../components/urls/UrlCard.module.css';
 import { AddUrlModal } from '../components/urls/AddUrlModal';
 import { Toast } from '../components/ui/Toast';
 import { Badge } from '../components/ui/Badge';
@@ -128,11 +130,13 @@ function formatPct(value: number): string {
   return `${value.toFixed(value >= 99 ? 2 : 1)}%`;
 }
 
-function estimateUptime(status: URLStatus): number {
-  if (status === 'UP') return 99.85;
-  if (status === 'WARN') return 97.4;
-  if (status === 'DOWN') return 89.2;
-  return 0;
+function estimateUptime(status: URLStatus, window: string): number {
+  const base = status === 'UP' ? 99.85 : status === 'WARN' ? 97.4 : 89.2;
+  if (window === '24h') return status === 'UP' ? 100 : base - 5;
+  if (window === '7d') return status === 'UP' ? 99.9 : base - 2;
+  if (window === '30d') return base;
+  if (window === '90d') return status === 'UP' ? 99.99 : base + 1;
+  return base;
 }
 
 function getP95Latency(values: Array<number | null>): number | null {
@@ -143,7 +147,7 @@ function getP95Latency(values: Array<number | null>): number | null {
   return sorted[index];
 }
 
-function toLiveFleetMonitor(url: URLItem, lastPingMap: Record<number, { latency_ms: number | null; checked_at: string }>): FleetMonitor {
+function toLiveFleetMonitor(url: URLItem, lastPingMap: Record<number, { latency_ms: number | null; checked_at: string }>, uptimeWindow: string): FleetMonitor {
   const lastPing = lastPingMap[url.id];
   const latency = lastPing?.latency_ms ?? null;
   return {
@@ -154,7 +158,7 @@ function toLiveFleetMonitor(url: URLItem, lastPingMap: Record<number, { latency_
     source: 'live',
     latency_ms: latency,
     p95_latency_ms: latency === null ? null : Math.round(latency * 1.55),
-    uptime_pct: estimateUptime(url.status),
+    uptime_pct: estimateUptime(url.status, uptimeWindow),
     region: 'Primary region',
     owner: 'Live workspace',
     last_checked_at: lastPing?.checked_at ?? url.created_at,
@@ -213,7 +217,35 @@ export function Favicon({ url, size = 16 }: { url: string; size?: number }) {
   );
 }
 
-function FleetTable({ monitors, onInspect }: { monitors: FleetMonitor[]; onInspect: (id: number) => void }) {
+function MiniSparkline({ value }: { value: number | null }) {
+  if (value === null) return null;
+  const data = [value * 0.9, value * 1.1, value * 0.8, value * 1.2, value * 0.95, value];
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const step = 60 / (data.length - 1);
+  const points = data.map((d, i) => `${i * step},${12 - ((d - min) / range) * 10}`).join(' L ');
+  
+  return (
+    <svg width="60" height="14" viewBox="0 0 60 14" style={{ marginTop: 4, overflow: 'visible' }}>
+      <path d={`M 0,${12 - ((data[0] - min) / range) * 10} L ${points}`} fill="none" stroke="#1D9E75" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function MiniUptimeBars({ pct }: { pct: number }) {
+  const bars = 15;
+  const downCount = Math.floor((100 - pct) / (100 / bars));
+  return (
+    <div style={{ display: 'flex', gap: '2px', marginTop: 4 }}>
+      {Array.from({ length: bars }).map((_, i) => (
+        <div key={i} style={{ width: '3px', height: '14px', borderRadius: '1px', backgroundColor: i >= bars - downCount ? '#E24B4A' : '#1D9E75', opacity: i >= bars - downCount ? 1 : 0.5 }} />
+      ))}
+    </div>
+  );
+}
+
+function FleetTable({ monitors, onInspect, onDeleteClick, uptimeWindow, setUptimeWindow }: { monitors: FleetMonitor[]; onInspect: (id: number) => void; onDeleteClick: (m: FleetMonitor) => void; uptimeWindow: string; setUptimeWindow: (v: string) => void }) {
   return (
     <div className="ops-table-wrap">
       <table className="ops-fleet-table">
@@ -222,7 +254,19 @@ function FleetTable({ monitors, onInspect }: { monitors: FleetMonitor[]; onInspe
             <th>Monitor</th>
             <th>Status</th>
             <th>Latency</th>
-            <th>Uptime</th>
+            <th style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              Uptime
+              <select 
+                value={uptimeWindow}
+                onChange={(e) => setUptimeWindow(e.target.value)}
+                style={{ background: 'transparent', border: '1px solid #E5E7EB', borderRadius: '4px', color: '#6B7280', fontSize: '11px', cursor: 'pointer', outline: 'none', padding: '2px 4px' }}
+              >
+                <option value="24h">24h</option>
+                <option value="7d">7 days</option>
+                <option value="30d">30 days</option>
+                <option value="90d">90 days</option>
+              </select>
+            </th>
             <th>Checks</th>
             <th>Owner</th>
             <th>Last checked</th>
@@ -235,7 +279,7 @@ function FleetTable({ monitors, onInspect }: { monitors: FleetMonitor[]; onInspe
               <td>
                 <div className="ops-monitor-cell">
                   <strong><Favicon url={monitor.web_address} />{monitor.name}</strong>
-                  <span>{monitor.web_address}</span>
+                  <span>URL: {monitor.web_address}</span>
                   <div className="ops-mobile-row">
                     <StatusPill status={monitor.status} />
                     <SourcePill source={monitor.source} />
@@ -246,10 +290,18 @@ function FleetTable({ monitors, onInspect }: { monitors: FleetMonitor[]; onInspe
                 <StatusPill status={monitor.status} />
               </td>
               <td>
-                <strong>{formatMs(monitor.latency_ms)}</strong>
-                <span>P95 {formatMs(monitor.p95_latency_ms)}</span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>{formatMs(monitor.latency_ms)}</div>
+                  <div style={{ fontSize: '11px', color: '#6B7280' }}>P95 {formatMs(monitor.p95_latency_ms)}</div>
+                  <MiniSparkline value={monitor.latency_ms} />
+                </div>
               </td>
-              <td>{formatPct(monitor.uptime_pct)}</td>
+              <td>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>{formatPct(monitor.uptime_pct)}</div>
+                  <MiniUptimeBars pct={monitor.uptime_pct} />
+                </div>
+              </td>
               <td>
                 <div className="ops-chip-row">
                   {getCheckChips(monitor.check_type).map((check) => (
@@ -267,9 +319,14 @@ function FleetTable({ monitors, onInspect }: { monitors: FleetMonitor[]; onInspe
               </td>
               <td>
                 {monitor.source === 'live' ? (
-                  <button type="button" className="ops-table-action" onClick={() => onInspect(monitor.id)}>
-                    Inspect
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" className="ops-table-action" onClick={() => onInspect(monitor.id)}>
+                      Inspect
+                    </button>
+                    <button type="button" className="ops-table-action" style={{ color: '#E24B4A' }} onClick={() => onDeleteClick(monitor)}>
+                      Delete
+                    </button>
+                  </div>
                 ) : (
                   <SourcePill source="demo" />
                 )}
@@ -303,10 +360,12 @@ function IncidentList({ incidents }: { incidents: FleetMonitor[] }) {
 }
 
 export function Dashboard({ view = 'home' }: DashboardProps) {
-  const { urls, isLoading, error, addUrl, retryFetch, clearError } = useUrls();
+  const { urls, isLoading, error, addUrl, deleteUrl, retryFetch, clearError } = useUrls();
   const navigate = useNavigate();
   const [extraDataMap, setExtraDataMap] = useState<Record<number, Record<string, unknown>>>({});
+  const [uptimeWindow, setUptimeWindow] = useState('90d');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [monitorToDelete, setMonitorToDelete] = useState<FleetMonitor | null>(null);
   const wsUrl = buildWsUrl(import.meta.env.VITE_API_BASE_URL);
   const { lastMessage, isConnected, connectionError } = useWebSocket(wsUrl);
   const { liveUrls, lastPingMap } = useLiveStatus(urls, lastMessage);
@@ -362,8 +421,8 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
   }, [lastMessage]);
 
   const fleetMonitors = useMemo<FleetMonitor[]>(() => {
-    return liveUrls.map((url) => toLiveFleetMonitor(url, lastPingMap));
-  }, [lastPingMap, liveUrls]);
+    return liveUrls.map((url) => toLiveFleetMonitor(url, lastPingMap, uptimeWindow));
+  }, [lastPingMap, liveUrls, uptimeWindow]);
 
   const metrics = useMemo(() => {
     const total = fleetMonitors.length;
@@ -437,7 +496,7 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
             </div>
             <Badge variant="neutral" label={`${fleetMonitors.length} sites`} />
           </div>
-          <FleetTable monitors={fleetMonitors} onInspect={handleInspectMonitor} />
+          <FleetTable monitors={fleetMonitors} onInspect={handleInspectMonitor} onDeleteClick={setMonitorToDelete} uptimeWindow={uptimeWindow} setUptimeWindow={setUptimeWindow} />
         </div>
         <div className="ops-panel">
           <div className="ops-panel-header">
@@ -478,7 +537,7 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
           </div>
           <Badge variant="neutral" label="Demo rows are presentation safe" />
         </div>
-        <FleetTable monitors={fleetMonitors} onInspect={handleInspectMonitor} />
+        <FleetTable monitors={fleetMonitors} onInspect={handleInspectMonitor} onDeleteClick={setMonitorToDelete} uptimeWindow={uptimeWindow} setUptimeWindow={setUptimeWindow} />
       </div>
     </>
   );
@@ -624,6 +683,16 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
             <p>{copy.description}</p>
           </div>
           <div className="ops-header-actions">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingRight: '12px', borderRight: '1px solid #E5E7EB' }}>
+              {!connectionError && !isConnected ? (
+                 <span style={{ width: 8, height: 8, borderRadius: '50%', border: '2px solid transparent', borderTopColor: '#FF7F50', display: 'inline-block', animation: 'spin 0.8s linear infinite', boxSizing: 'border-box' }} />
+              ) : (
+                 <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: connectionError ? '#E24B4A' : isConnected ? '#1D9E75' : '#BA7517', display: 'inline-block' }} />
+              )}
+              <span style={{ color: connectionError ? '#E24B4A' : isConnected ? '#1D9E75' : '#BA7517', fontWeight: 600, fontSize: '13px' }}>
+                {connectionError ? 'Disconnected' : isConnected ? 'Live' : 'Reconnecting...'}
+              </span>
+            </div>
             {isLoading && <Badge variant="neutral" label="Syncing live monitors" />}
             <Badge variant="neutral" label={`${signalSnapshotCount} signal snapshots`} />
             <Badge variant="neutral" label={`${fleetMonitors.length} sites`} />
@@ -632,15 +701,57 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
 
         {renderView()}
 
-        <AnimatePresence>
-          {isAddModalOpen && (
-            <AddUrlModal
-              onClose={() => setIsAddModalOpen(false)}
-              onAdd={handleAddUrl}
-              isLoading={isLoading}
-            />
-          )}
-        </AnimatePresence>
+        {createPortal(
+          <AnimatePresence>
+            {isAddModalOpen && (
+              <AddUrlModal
+                onClose={() => setIsAddModalOpen(false)}
+                onAdd={handleAddUrl}
+                isLoading={isLoading}
+              />
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+
+        {createPortal(
+          <AnimatePresence>
+            {monitorToDelete && (
+              <motion.div
+                className={modalStyles.modalOverlay}
+                onClick={() => setMonitorToDelete(null)}
+                role="presentation"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+              >
+                <motion.div
+                  className={modalStyles.confirmDialog}
+                  role="dialog"
+                  aria-modal="true"
+                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                  initial={{ opacity: 0, y: 18, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 12, scale: 0.96 }}
+                  transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <motion.div className={modalStyles.confirmIcon} initial={{ scale: 0.6, rotate: -18 }} animate={{ scale: 1, rotate: 0 }}>!</motion.div>
+                  <h2 style={{ margin: 0, color: '#111827', fontSize: '1.35rem' }}>Delete monitor?</h2>
+                  <p style={{ margin: '10px 0 0', color: '#4B5563', lineHeight: 1.55 }}>This will remove <strong>{monitorToDelete.name}</strong> and its saved monitoring history.</p>
+                  <div className={modalStyles.dialogActions}>
+                    <motion.button className={modalStyles.cancelBtn} type="button" onClick={() => setMonitorToDelete(null)}>Cancel</motion.button>
+                    <motion.button className={modalStyles.confirmDeleteBtn} type="button" onClick={async () => {
+                      await deleteUrl(monitorToDelete.id);
+                      setMonitorToDelete(null);
+                    }}>Delete</motion.button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
         {error && (
           <Toast

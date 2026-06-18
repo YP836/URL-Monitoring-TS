@@ -64,6 +64,7 @@ export function UrlDetailPage() {
   const [extraData, setExtraData] = useState<Record<string, unknown> | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [uptimeWindow, setUptimeWindow] = useState('30d');
   const { lastMessage, isConnected, connectionError } = useWebSocket(buildWsUrl(import.meta.env.VITE_API_BASE_URL));
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export function UrlDetailPage() {
       status_code: lastMessage.status_code ?? null,
       is_up: lastMessage.status === 'UP',
     };
-    setLivePings(previous => [nextPing, ...previous].slice(0, 50));
+    setLivePings(previous => [nextPing, ...previous].slice(0, 2000));
     if (lastMessage.extra_data && lastMessage.check_type) {
       setExtraData((previous) => ({
         ...(previous ?? {}),
@@ -141,8 +142,8 @@ export function UrlDetailPage() {
   };
   return (
     <PageLayout isConnected={isConnected} connectionError={connectionError}>
-      <button className="link-button" type="button" onClick={() => navigate('/dashboard')}>
-        &larr; Back to dashboard
+      <button className="link-button" type="button" onClick={() => navigate('/monitors')}>
+        &larr; Back to monitors
       </button>
       {isLoading && <DetailSkeleton />}
       {showNotFound && <CenteredMessage title="URL not found" />}
@@ -182,8 +183,26 @@ export function UrlDetailPage() {
               </button>
             </div>
           </header>
-          <StatsRow pings={livePings} visibleMetrics={visibleMetrics} extraData={extraData} />
-          {showUptimeChart && <Section title="Uptime - last 90 days"><UptimeBar pings={livePings} /></Section>}
+          <StatsRow pings={livePings} visibleMetrics={visibleMetrics} extraData={extraData} uptimeWindow={uptimeWindow} setUptimeWindow={setUptimeWindow} />
+          {showUptimeChart && (
+            <Section 
+              title={`Uptime - last ${uptimeWindow === '24h' ? '24 hours' : uptimeWindow === '7d' ? '7 days' : uptimeWindow === '30d' ? '30 days' : '90 days'}`}
+              action={
+                <select 
+                  value={uptimeWindow}
+                  onChange={(e) => setUptimeWindow(e.target.value)}
+                  style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '6px', color: '#374151', fontSize: '13px', cursor: 'pointer', outline: 'none', padding: '6px 12px' }}
+                >
+                  <option value="24h">24 hours</option>
+                  <option value="7d">7 days</option>
+                  <option value="30d">30 days</option>
+                  <option value="90d">90 days</option>
+                </select>
+              }
+            >
+              <UptimeBar pings={livePings} uptimeWindow={uptimeWindow} />
+            </Section>
+          )}
           {showLatencyChart && <Section title="Response time - last 50 pings"><LatencyChart pings={livePings} /></Section>}
           <RecentChecks pings={livePings} />
           <AnimatePresence>
@@ -263,10 +282,13 @@ function DetailSkeleton() {
 function CenteredMessage({ title, detail }: { title: string; detail?: string }) {
   return <div className="center-state"><div className="state-card"><div>{title}</div>{detail && <p>{detail}</p>}</div></div>;
 }
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, action, children }: { title: string | ReactNode; action?: ReactNode; children: ReactNode }) {
   return (
     <section style={{ marginBottom: 40 }}>
-      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: '#111827' }}>{title}</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 600, color: '#111827', margin: 0 }}>{title}</h2>
+        {action && <div>{action}</div>}
+      </div>
       <div className="console-panel">{children}</div>
     </section>
   );

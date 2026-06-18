@@ -1,6 +1,5 @@
 import React from 'react';
 import { Sidebar } from './Sidebar';
-import { TopBar } from './TopBar';
 import ErrorBoundary from '../ui/ErrorBoundary';
 
 interface PageLayoutProps {
@@ -13,25 +12,19 @@ interface PageLayoutProps {
 export function PageLayout({
   children,
   isConnected,
-  connectionError,
+  connectionError: _connectionError,
   urlCount = 0,
 }: PageLayoutProps) {
   return (
     <div className="app-shell">
-      <TopBar isConnected={isConnected} connectionError={connectionError} />
-      <div
-        className={`connection-banner${isConnected ? '' : ' visible'}`}
-      >
-        Live updates paused - attempting to reconnect...
-      </div>
-      <div className="app-body">
-        <Sidebar urlCount={urlCount} />
-        <main
-          className="main-content"
-        >
-          <ErrorBoundary>{children}</ErrorBoundary>
-        </main>
-      </div>
+      <Sidebar urlCount={urlCount} />
+      <main className="main-content">
+
+        <div className={`connection-banner${isConnected ? '' : ' visible'}`}>
+          Live updates paused - attempting to reconnect...
+        </div>
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </main>
     </div>
   );
 }

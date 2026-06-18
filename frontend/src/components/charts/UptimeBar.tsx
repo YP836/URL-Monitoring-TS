@@ -13,12 +13,42 @@ interface DayBucket {
   hasAnyDown: boolean;
 }
 
-function bucketByDay(pings: PingHistoryRead[]): DayBucket[] {
+function bucketPings(pings: PingHistoryRead[], window: string): DayBucket[] {
   const buckets: DayBucket[] = [];
+  
+  if (window === '24h') {
+    const now = new Date();
+    const endHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
+    
+    const pingsByHour: Record<string, PingHistoryRead[]> = {};
+    for (const ping of pings) {
+      const d = new Date(ping.checked_at);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}T${d.getHours()}`;
+      if (!pingsByHour[key]) pingsByHour[key] = [];
+      pingsByHour[key].push(ping);
+    }
+    
+    for (let i = 23; i >= 0; i--) {
+      const d = new Date(endHour.getTime() - i * 60 * 60 * 1000);
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}T${d.getHours()}`;
+      const hourPings = pingsByHour[key] || [];
+      const label = d.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+      
+      if (hourPings.length === 0) {
+        buckets.push({ date: label, hasData: false, uptimePct: 100, isAllUp: true, hasAnyDown: false });
+        continue;
+      }
+      const upCount = hourPings.filter(p => p.is_up).length;
+      const hasAnyDown = hourPings.some(p => !p.is_up);
+      buckets.push({ date: label, hasData: true, uptimePct: (upCount / hourPings.length) * 100, isAllUp: !hasAnyDown, hasAnyDown });
+    }
+    return buckets;
+  }
+
+  const days = window === '7d' ? 7 : window === '30d' ? 30 : 90;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Pre-group pings by date string
   const pingsByDate: Record<string, PingHistoryRead[]> = {};
   for (const ping of pings) {
     const dateStr = ping.checked_at.split('T')[0];
@@ -26,8 +56,7 @@ function bucketByDay(pings: PingHistoryRead[]): DayBucket[] {
     pingsByDate[dateStr].push(ping);
   }
 
-  // Iterate from 89 days ago to today (90 days total)
-  for (let i = 89; i >= 0; i--) {
+  for (let i = days - 1; i >= 0; i--) {
     const d = new Date(today.getTime());
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split('T')[0];
@@ -61,10 +90,10 @@ function bucketByDay(pings: PingHistoryRead[]): DayBucket[] {
   return buckets;
 }
 
-export function UptimeBar({ pings }: UptimeBarProps) {
+export function UptimeBar({ pings, uptimeWindow = '90d' }: UptimeBarProps & { uptimeWindow?: string }) {
   const [hoveredBucket, setHoveredBucket] = useState<DayBucket | null>(null);
   
-  const buckets = bucketByDay(pings);
+  const buckets = bucketPings(pings, uptimeWindow);
   
   const totalPings = pings.length;
   const upPings = pings.filter(p => p.is_up).length;
@@ -77,6 +106,7 @@ export function UptimeBar({ pings }: UptimeBarProps) {
   };
 
   const formatDateLabel = (dateStr: string) => {
+    if (uptimeWindow === '24h') return dateStr;
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
@@ -122,11 +152,11 @@ export function UptimeBar({ pings }: UptimeBarProps) {
       </div>
       
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12, color: '#6B7280' }}>
-        <span>90 days ago</span>
+        <span>{uptimeWindow === '24h' ? '24 hours ago' : uptimeWindow === '7d' ? '7 days ago' : uptimeWindow === '30d' ? '30 days ago' : '90 days ago'}</span>
         <span style={{ fontWeight: 500, color: '#111827' }}>
           {overallUptime !== null ? `${overallUptime}% uptime` : 'No data yet'}
         </span>
-        <span>Today</span>
+        <span>{uptimeWindow === '24h' ? 'Now' : 'Today'}</span>
       </div>
     </div>
   );

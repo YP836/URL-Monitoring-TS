@@ -6,6 +6,8 @@ interface StatsRowProps {
   pings: PingHistoryRead[];
   visibleMetrics?: MetricKey[];
   extraData?: Record<string, unknown> | null;
+  uptimeWindow?: string;
+  setUptimeWindow?: (window: string) => void;
 }
 
 function computeAvgLatency(pings: PingHistoryRead[]): string {
@@ -25,11 +27,17 @@ function computeP95Latency(pings: PingHistoryRead[]): string {
   return `${times[idx]}ms`;
 }
 
-function computeUptime30d(pings: PingHistoryRead[]): string {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+function computeUptime(pings: PingHistoryRead[], window: string): string {
+  if (pings.length === 0) return '-';
 
-  const recentPings = pings.filter((ping) => new Date(ping.checked_at) >= thirtyDaysAgo);
+  let msAgo = 30 * 24 * 60 * 60 * 1000; // default 30d
+  if (window === '24h') msAgo = 24 * 60 * 60 * 1000;
+  if (window === '7d') msAgo = 7 * 24 * 60 * 60 * 1000;
+  if (window === '90d') msAgo = 90 * 24 * 60 * 60 * 1000;
+
+  const cutoff = new Date(Date.now() - msAgo);
+  const recentPings = pings.filter((ping) => new Date(ping.checked_at) >= cutoff);
+  
   if (recentPings.length === 0) return '-';
 
   const upCount = recentPings.filter((ping) => ping.is_up).length;
@@ -71,10 +79,12 @@ export function StatsRow({
   pings,
   visibleMetrics = ['avgLatency', 'p95Latency', 'uptime', 'lastChecked'],
   extraData = null,
+  uptimeWindow = '30d',
+  setUptimeWindow,
 }: StatsRowProps) {
   const avgLatency = computeAvgLatency(pings);
   const p95Latency = computeP95Latency(pings);
-  const uptime30d = computeUptime30d(pings);
+  const uptimeVal = computeUptime(pings, uptimeWindow);
   const sortedPings = [...pings].sort((a, b) => new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime());
   const lastChecked = sortedPings.length > 0 ? timeAgo(sortedPings[0].checked_at) : 'Never';
   const sslData = getExtraDataForCheck('SSL_EXPIRY', extraData);
@@ -111,10 +121,28 @@ export function StatsRow({
     color: '#111827',
   };
 
-  const cards: Array<{ key: MetricKey; label: string; value: string }> = [
+  const cards: Array<{ key: MetricKey; label: string | React.ReactNode; value: string }> = [
     { key: 'avgLatency', label: 'Avg latency', value: avgLatency },
     { key: 'p95Latency', label: 'P95 latency', value: p95Latency },
-    { key: 'uptime', label: 'Uptime (30d)', value: uptime30d },
+    { 
+      key: 'uptime', 
+      label: setUptimeWindow ? (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          Uptime
+          <select 
+            value={uptimeWindow}
+            onChange={(e) => setUptimeWindow(e.target.value)}
+            style={{ background: 'transparent', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'inherit', fontSize: 'inherit', cursor: 'pointer', outline: 'none', padding: '0 4px', lineHeight: 1 }}
+          >
+            <option value="24h">24h</option>
+            <option value="7d">7d</option>
+            <option value="30d">30d</option>
+            <option value="90d">90d</option>
+          </select>
+        </span>
+      ) : `Uptime (${uptimeWindow})`, 
+      value: uptimeVal 
+    },
     { key: 'lastChecked', label: 'Last checked', value: lastChecked },
     {
       key: 'sslExpiry',
