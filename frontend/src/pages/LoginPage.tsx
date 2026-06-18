@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { loginUser } from '../api/client';
+import { getApiErrorMessage, loginUser } from '../api/client';
 import { Toast } from '../components/ui/Toast';
+import { isValidEmail } from '../utils/validation';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -17,13 +18,20 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const normalizedEmail = email.trim();
+    if (!isValidEmail(normalizedEmail)) {
+      setError('Enter a valid email address.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await loginUser({ username: email, password });
+      const data = await loginUser({ username: normalizedEmail, password });
       login(data.access_token);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to login');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to login'));
     } finally {
       setLoading(false);
     }
@@ -64,6 +72,7 @@ export function LoginPage() {
                   placeholder="you@example.com" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  aria-invalid={error === 'Enter a valid email address.'}
                   required 
                 />
               </div>
@@ -76,7 +85,7 @@ export function LoginPage() {
                 <input 
                   type={showPassword ? 'text' : 'password'} 
                   className="auth-input" 
-                  placeholder="••••••••" 
+                  placeholder="Password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required 

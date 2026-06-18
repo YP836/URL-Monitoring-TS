@@ -16,6 +16,7 @@ export function Toast({ message, onDismiss }: ToastProps) {
 
   return createPortal(
     <div
+      role="status"
       style={{
         position: 'fixed',
         bottom: 24,
@@ -52,7 +53,7 @@ export function Toast({ message, onDismiss }: ToastProps) {
           height: 24,
         }}
       >
-        ×
+        x
       </button>
     </div>,
     document.body

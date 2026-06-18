@@ -13,6 +13,7 @@ import { buildWsUrl, useWebSocket } from '../hooks/useWebSocket';
 import { useLiveStatus } from '../hooks/useLiveStatus';
 import { URLItem, URLStatus } from '../types';
 import { FleetMonitor } from '../data/demoMonitors';
+import { timeAgo } from '../utils/dates';
 
 export type OperationsView =
   | 'home'
@@ -106,14 +107,6 @@ const reportCards = [
   ['Status-page summary', 'Subscriber-visible service health snapshot', 'Public view'],
 ];
 
-function timeAgo(isoString: string): string {
-  const seconds = Math.max(0, Math.floor((Date.now() - new Date(isoString).getTime()) / 1000));
-  if (seconds < 60) return 'just now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
-}
-
 function formatInterval(seconds?: number): string {
   if (!seconds) return '30s';
   if (seconds < 60) return `${seconds}s`;
@@ -197,6 +190,40 @@ function StatusPill({ status }: { status: URLStatus }) {
 function SourcePill({ source }: { source: 'live' | 'demo' }) {
   return <span className={`ops-source-pill ${source}`}>{source === 'live' ? 'Live' : 'Demo'}</span>;
 }
+
+interface ThinksysAboutRow {
+  eyebrow: string;
+  title: string;
+  body: string;
+  image: string;
+  alt: string;
+  reverse?: boolean;
+}
+
+const thinksysAboutRows: ThinksysAboutRow[] = [
+  {
+    eyebrow: 'Mission',
+    title: 'We build dependable digital systems for teams that cannot afford uncertainty.',
+    body: 'ThinkSys helps companies turn complex engineering, QA, automation, and cloud operations into calm, measurable execution. Our mission is to make modern software feel faster, clearer, and more resilient from the first release to every scale moment after it.',
+    image: '/thinksys-tech-workspace.svg',
+    alt: 'AI generated modern technology workspace placeholder',
+  },
+  {
+    eyebrow: 'Innovation',
+    title: 'Future-ready infrastructure, thoughtful automation, and practical intelligence.',
+    body: 'We combine product engineering discipline with emerging tools, AI-assisted workflows, and observability-first thinking. The result is software that is not just shipped, but understood, improved, and trusted in real operating conditions.',
+    image: '/thinksys-server-room.svg',
+    alt: 'AI generated futuristic server room placeholder',
+    reverse: true,
+  },
+  {
+    eyebrow: 'Team',
+    title: 'A dedicated crew of engineers, designers, testers, and problem solvers.',
+    body: 'Behind every engagement is a team that cares about the details: performance, security, accessibility, maintainability, and the human experience around the product. We work as partners, not passengers.',
+    image: '/thinksys-team-lab.svg',
+    alt: 'AI generated collaborative technology team placeholder',
+  },
+];
 
 export function Favicon({ url, size = 16 }: { url: string; size?: number }) {
   const [error, setError] = useState(false);
@@ -359,6 +386,149 @@ function IncidentList({ incidents }: { incidents: FleetMonitor[] }) {
   );
 }
 
+function HomeParticles() {
+  return (
+    <div className="home-particles" aria-hidden="true">
+      {Array.from({ length: 14 }, (_, index) => (
+        <span key={index} className={`home-particle particle-${index + 1}`} />
+      ))}
+    </div>
+  );
+}
+
+function HeroOrb() {
+  return (
+    <div className="home-orb-stage" aria-hidden="true">
+      <div className="home-orb-glow" />
+      <div className="home-orb-ring ring-one" />
+      <div className="home-orb-ring ring-two" />
+      <div className="home-orb-ring ring-three" />
+      <div className="home-orb-core">
+        <span />
+      </div>
+      <div className="home-orb-dashboard dash-one" />
+      <div className="home-orb-dashboard dash-two" />
+      <div className="home-orb-dashboard dash-three" />
+    </div>
+  );
+}
+
+function AboutRow({ row, index }: { row: ThinksysAboutRow; index: number }) {
+  return (
+    <motion.article
+      className={`thinksys-about-row${row.reverse ? ' is-reverse' : ''}`}
+      initial={{ opacity: 0, y: 34 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.28 }}
+      transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div className="thinksys-about-copy">
+        <span>{String(index + 1).padStart(2, '0')} / {row.eyebrow}</span>
+        <h3>{row.title}</h3>
+        <p>{row.body}</p>
+      </div>
+      <div className="thinksys-tilt-wrap">
+        <img src={row.image} alt={row.alt} loading="lazy" />
+      </div>
+    </motion.article>
+  );
+}
+
+function ThinksysHome() {
+  return (
+    <div className="thinksys-home">
+      <motion.section
+        className="thinksys-hero"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <HomeParticles />
+        <div className="thinksys-hero-copy">
+          <motion.p
+            className="thinksys-kicker"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.48, delay: 0.1 }}
+          >
+            ThinkSys digital command studio
+          </motion.p>
+          <motion.h1
+            initial={{ opacity: 0, y: 26 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.62, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          >
+            Welcome to ThinkSys
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.62, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          >
+            We design, engineer, test, and operate premium digital products with the precision of a lab and the urgency of a launch team.
+          </motion.p>
+          <motion.div
+            className="thinksys-hero-actions"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.52, delay: 0.38 }}
+          >
+            <a href="#thinksys-about">Explore our work</a>
+            <a href="#thinksys-contact">Contact us</a>
+          </motion.div>
+        </div>
+        <HeroOrb />
+      </motion.section>
+
+      <section className="thinksys-about" id="thinksys-about">
+        <motion.div
+          className="thinksys-section-heading"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.36 }}
+          transition={{ duration: 0.56 }}
+        >
+          <p className="thinksys-kicker">About us</p>
+          <h2>Built for teams who expect craft, velocity, and reliability.</h2>
+        </motion.div>
+        <div className="thinksys-about-stack">
+          {thinksysAboutRows.map((row, index) => (
+            <AboutRow key={row.eyebrow} row={row} index={index} />
+          ))}
+        </div>
+      </section>
+
+      <motion.section
+        className="thinksys-contact"
+        id="thinksys-contact"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.32 }}
+        transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div>
+          <p className="thinksys-kicker">Contact us</p>
+          <h2>Let us build something precise together.</h2>
+          <p>Reach the team directly for product engineering, QA strategy, automation, platform modernization, and high-trust delivery partnerships.</p>
+        </div>
+        <div className="thinksys-contact-card">
+          <a href="mailto:singh.yatharth@thinksys.com">singh.yatharth@thinksys.com</a>
+          <a href="mailto:yuvrajpathania836@gmail.com">yuvrajpathania836@gmail.com</a>
+        </div>
+      </motion.section>
+
+      <footer className="thinksys-footer">
+        <span>&copy; ThinkSys. Crafted for modern digital operations.</span>
+        <nav aria-label="Company links">
+          <a href="#privacy-policy">Privacy Policy</a>
+          <a href="#terms-of-service">Terms of Service</a>
+          <a href="#company-guidelines">Company Guidelines</a>
+        </nav>
+      </footer>
+    </div>
+  );
+}
+
 export function Dashboard({ view = 'home' }: DashboardProps) {
   const { urls, isLoading, error, addUrl, deleteUrl, retryFetch, clearError } = useUrls();
   const navigate = useNavigate();
@@ -371,6 +541,7 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
   const { liveUrls, lastPingMap } = useLiveStatus(urls, lastMessage);
   const copy = viewCopy[view];
   const signalSnapshotCount = Object.keys(extraDataMap).length;
+  const showPageHeader = view !== 'home';
 
   useEffect(() => {
     document.title = `${copy.title} - Uptime Monitor`;
@@ -449,31 +620,6 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
     if (id > 0) navigate(`/urls/${id}`);
   };
 
-  const renderCommandCard = () => (
-    <motion.section
-      className="ops-command-card"
-      initial={{ opacity: 0, y: 20, scale: 0.985 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-    >
-      <div>
-        <p className="landing-kicker">Command center</p>
-        <h2>Start a precision monitor</h2>
-        <p>Add the URL, choose only the signals you need, and set the exact check frequency.</p>
-      </div>
-      <motion.button
-        type="button"
-        disabled={isLoading}
-        className="primary start-monitor-button"
-        onClick={() => setIsAddModalOpen(true)}
-        whileHover={{ y: -2, scale: 1.015 }}
-        whileTap={{ scale: 0.97 }}
-      >
-        Start monitoring
-      </motion.button>
-    </motion.section>
-  );
-
   const renderMetrics = () => (
     <section className="ops-metric-grid">
       <DashboardMetric label="Monitors" value={String(metrics.total)} detail={`${liveUrls.length} live + ${metrics.total - liveUrls.length} demo`} />
@@ -483,40 +629,7 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
     </section>
   );
 
-  const renderHome = () => (
-    <>
-      {renderCommandCard()}
-      {renderMetrics()}
-      <section className="ops-home-grid">
-        <div className="ops-panel ops-panel-wide">
-          <div className="ops-panel-header">
-            <div>
-              <p className="ops-kicker">Fleet health</p>
-              <h3>All monitored websites</h3>
-            </div>
-            <Badge variant="neutral" label={`${fleetMonitors.length} sites`} />
-          </div>
-          <FleetTable monitors={fleetMonitors} onInspect={handleInspectMonitor} onDeleteClick={setMonitorToDelete} uptimeWindow={uptimeWindow} setUptimeWindow={setUptimeWindow} />
-        </div>
-        <div className="ops-panel">
-          <div className="ops-panel-header">
-            <div>
-              <p className="ops-kicker">Incidents</p>
-              <h3>Needs attention</h3>
-            </div>
-            <Badge variant={incidents.length ? 'warning' : 'success'} label={`${incidents.length} active`} />
-          </div>
-          <IncidentList incidents={incidents} />
-        </div>
-      </section>
-      <section className="ops-card-grid">
-        <OperationalCard icon="ti-world-share" title="Status-page readiness" value="2 pages" detail="Public and internal pages prepared with component health." />
-        <OperationalCard icon="ti-calendar-time" title="Maintenance windows" value="3 planned" detail="Scheduled work can mute expected downtime." />
-        <OperationalCard icon="ti-bell-ringing" title="Alert policies" value="4 routes" detail="Slack, email, webhook, and on-call escalation are mapped." />
-        <OperationalCard icon="ti-file-analytics" title="Reports" value="4 templates" detail="Export uptime, P95, incident, and stakeholder reports." />
-      </section>
-    </>
-  );
+  const renderHome = () => <ThinksysHome />;
 
   const renderMonitors = () => (
     <>
@@ -676,28 +789,30 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
   return (
     <PageLayout isConnected={isConnected} connectionError={connectionError} urlCount={fleetMonitors.length}>
       <div className="ops-page">
-        <header className="ops-page-header">
-          <div>
-            <p className="ops-kicker">{copy.kicker}</p>
-            <h1>{copy.title}</h1>
-            <p>{copy.description}</p>
-          </div>
-          <div className="ops-header-actions">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingRight: '12px', borderRight: '1px solid #E5E7EB' }}>
-              {!connectionError && !isConnected ? (
-                 <span style={{ width: 8, height: 8, borderRadius: '50%', border: '2px solid transparent', borderTopColor: '#FF7F50', display: 'inline-block', animation: 'spin 0.8s linear infinite', boxSizing: 'border-box' }} />
-              ) : (
-                 <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: connectionError ? '#E24B4A' : isConnected ? '#1D9E75' : '#BA7517', display: 'inline-block' }} />
-              )}
-              <span style={{ color: connectionError ? '#E24B4A' : isConnected ? '#1D9E75' : '#BA7517', fontWeight: 600, fontSize: '13px' }}>
-                {connectionError ? 'Disconnected' : isConnected ? 'Live' : 'Reconnecting...'}
-              </span>
+        {showPageHeader && (
+          <header className="ops-page-header">
+            <div>
+              <p className="ops-kicker">{copy.kicker}</p>
+              <h1>{copy.title}</h1>
+              <p>{copy.description}</p>
             </div>
-            {isLoading && <Badge variant="neutral" label="Syncing live monitors" />}
-            <Badge variant="neutral" label={`${signalSnapshotCount} signal snapshots`} />
-            <Badge variant="neutral" label={`${fleetMonitors.length} sites`} />
-          </div>
-        </header>
+            <div className="ops-header-actions">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingRight: '12px', borderRight: '1px solid #E5E7EB' }}>
+                {!connectionError && !isConnected ? (
+                   <span style={{ width: 8, height: 8, borderRadius: '50%', border: '2px solid transparent', borderTopColor: '#FF7F50', display: 'inline-block', animation: 'spin 0.8s linear infinite', boxSizing: 'border-box' }} />
+                ) : (
+                   <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: connectionError ? '#E24B4A' : isConnected ? '#1D9E75' : '#BA7517', display: 'inline-block' }} />
+                )}
+                <span style={{ color: connectionError ? '#E24B4A' : isConnected ? '#1D9E75' : '#BA7517', fontWeight: 600, fontSize: '13px' }}>
+                  {connectionError ? 'Disconnected' : isConnected ? 'Live' : 'Reconnecting...'}
+                </span>
+              </div>
+              {isLoading && <Badge variant="neutral" label="Syncing live monitors" />}
+              <Badge variant="neutral" label={`${signalSnapshotCount} signal snapshots`} />
+              <Badge variant="neutral" label={`${fleetMonitors.length} sites`} />
+            </div>
+          </header>
+        )}
 
         {renderView()}
 

@@ -1,10 +1,6 @@
 import { useState, useEffect } from 'react';
 import { URLItem, AddURLPayload } from '../types';
-import { getUrls as apiGetUrls, addUrl as apiAddUrl, deleteUrl as apiDeleteUrl } from '../api/client';
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong';
-}
+import { getApiErrorMessage, getUrls as apiGetUrls, addUrl as apiAddUrl, deleteUrl as apiDeleteUrl } from '../api/client';
 
 export function useUrls() {
   const [urls, setUrls] = useState<URLItem[]>([]);
@@ -18,7 +14,7 @@ export function useUrls() {
       const data = await apiGetUrls();
       setUrls(data);
     } catch (err) {
-      const message = getErrorMessage(err);
+      const message = getApiErrorMessage(err, 'Failed to load monitors');
       setError(message);
       throw new Error(message);
     } finally {
@@ -38,7 +34,7 @@ export function useUrls() {
         }
       } catch (err) {
         if (mounted) {
-          setError(getErrorMessage(err));
+          setError(getApiErrorMessage(err, 'Failed to load monitors'));
         }
       } finally {
         if (mounted) {
@@ -59,7 +55,7 @@ export function useUrls() {
       const newUrl = await apiAddUrl(payload);
       setUrls((prev) => [...prev, newUrl]);
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(getApiErrorMessage(err, 'Failed to add monitor'));
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +66,7 @@ export function useUrls() {
       await apiDeleteUrl(id);
       setUrls((prev) => prev.filter((u) => u.id !== id));
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(getApiErrorMessage(err, 'Failed to delete monitor'));
     }
   };
 

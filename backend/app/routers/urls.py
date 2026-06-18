@@ -3,12 +3,14 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from starlette.concurrency import run_in_threadpool
 from typing import Annotated
 from ..auth import get_current_user
 from ..models import UserRead
 
 from ..database import get_connection
 from ..models import PingHistoryRead, URLCreate, URLDetail, URLExtraData, URLRead, URLUpdate
+from ..worker.tasks import ping_url
 
 
 router = APIRouter()
@@ -31,6 +33,23 @@ def _normalize_extra_data(value: Any) -> dict[str, Any] | None:
 def _split_check_types(value: str | None) -> list[str]:
     checks = [item.strip().upper() for item in (value or "HTTP").split(",") if item.strip()]
     return checks or ["HTTP"]
+
+
+def _run_check_now_sync(url_id: int, web_address: str, check_type: str, keyword: str | None) -> dict[str, Any]:
+    return ping_url.apply(args=[url_id, web_address, check_type, keyword]).get()
+
+
+def _enqueue_selected_checks(url_id: int, web_address: str, check_type: str, keyword: str | None) -> None:
+    for index, selected_check in enumerate(_split_check_types(check_type)):
+        try:
+            ping_url.apply_async(
+                args=[url_id, web_address, selected_check, keyword],
+                expires=25,
+                countdown=index * 2,
+            )
+        except Exception:
+            # If Redis/Celery is offline, the manual Check now endpoint still works synchronously.
+            continue
 
 
 @router.get("/urls", response_model=list[URLRead])
@@ -91,7 +110,14 @@ async def create_url(payload: URLCreate, current_user: Annotated[UserRead, Depen
                 payload.check_interval_seconds,
                 payload.ping_interval_seconds,
             )
-            return URLRead(**dict(row))
+            created_url = URLRead(**dict(row))
+            _enqueue_selected_checks(
+                created_url.id,
+                created_url.web_address,
+                created_url.check_type,
+                created_url.keyword_to_find,
+            )
+            return created_url
     except HTTPException:
         raise
     except Exception:
@@ -165,7 +191,11 @@ async def get_url_detail(url_id: int, current_user: Annotated[UserRead, Depends(
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(status_code=500, detail="Internal server error while fetching URL detail")
+        url = _mock_urls.get(url_id)
+        if not url:
+            raise HTTPException(status_code=404, detail="URL not found")
+
+        return URLDetail(**url.model_dump(), recent_pings=[])
 
 
 @router.get("/urls/{url_id}/extra", response_model=URLExtraData)
@@ -212,6 +242,40 @@ async def get_url_extra_data(url_id: int, current_user: Annotated[UserRead, Depe
         raise HTTPException(status_code=404, detail="No extra data found")
 
 
+@router.post("/urls/{url_id}/check")
+async def check_url_now(url_id: int, current_user: Annotated[UserRead, Depends(get_current_user)]) -> dict[str, Any]:
+    """Run the selected checks for a URL immediately."""
+    async with get_connection() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT id, web_address, check_type, keyword_to_find
+            FROM urls
+            WHERE id = $1 AND user_id = $2
+            """,
+            url_id,
+            current_user.id,
+        )
+        if not row:
+            raise HTTPException(status_code=404, detail="URL not found")
+
+    results: list[dict[str, Any]] = []
+    for selected_check in _split_check_types(row["check_type"]):
+        result = await run_in_threadpool(
+            _run_check_now_sync,
+            row["id"],
+            row["web_address"],
+            selected_check,
+            row["keyword_to_find"],
+        )
+        results.append(result)
+
+    return {
+        "url_id": url_id,
+        "checks_run": len(results),
+        "results": results,
+    }
+
+
 @router.put("/urls/{url_id}", response_model=URLRead)
 async def update_url(url_id: int, payload: URLUpdate, current_user: Annotated[UserRead, Depends(get_current_user)]) -> URLRead:
     """Update mutable URL fields without changing its selected monitoring signals."""
@@ -248,7 +312,7 @@ async def update_url(url_id: int, payload: URLUpdate, current_user: Annotated[Us
     except HTTPException:
         raise
     except Exception:
-        url = _mock_urls.get(url_id, current_user.id)
+        url = _mock_urls.get(url_id)
         if not url:
             raise HTTPException(status_code=404, detail="URL not found")
 

@@ -1,5 +1,5 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { updateUrl } from '../../api/client';
+import { getApiErrorMessage, updateUrl } from '../../api/client';
 import { URLItem } from '../../types';
 import { IntervalInput, UnitType, convertToSeconds, parseSeconds } from './IntervalInput';
 
@@ -48,8 +48,8 @@ export function EditUrlModal({ url, onClose, onSuccess }: EditUrlModalProps) {
         ping_interval_seconds: intervalSeconds !== url.ping_interval_seconds ? intervalSeconds : undefined
       });
       onSuccess(updated);
-    } catch (err: any) {
-      setError(err.message || 'Failed to update URL');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to update URL'));
     } finally {
       setIsSubmitting(false);
     }
