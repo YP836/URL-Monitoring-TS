@@ -92,11 +92,12 @@ function bucketPings(pings: PingHistoryRead[], window: string): DayBucket[] {
 
 export function UptimeBar({ pings, uptimeWindow = '90d' }: UptimeBarProps & { uptimeWindow?: string }) {
   const [hoveredBucket, setHoveredBucket] = useState<DayBucket | null>(null);
-  
-  const buckets = bucketPings(pings, uptimeWindow);
-  
-  const totalPings = pings.length;
-  const upPings = pings.filter(p => p.is_up).length;
+
+  const availabilityPings = pings.filter((ping) => !ping.check_type || ping.check_type === 'HTTP');
+  const buckets = bucketPings(availabilityPings, uptimeWindow);
+
+  const totalPings = availabilityPings.length;
+  const upPings = availabilityPings.filter(p => p.is_up).length;
   const overallUptime = totalPings === 0 ? null : ((upPings / totalPings) * 100).toFixed(1);
 
   const getBucketColor = (bucket: DayBucket) => {

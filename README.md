@@ -32,6 +32,27 @@ The project is built around a continuous, real-time data loop across 5 core tech
 
 ## 🚀 Local Setup Instructions
 
+### Run with Docker
+
+The project can run as a full Docker Compose stack:
+
+```bash
+docker compose up --build -d
+```
+
+This starts PostgreSQL, Redis, FastAPI, Celery Worker, Celery Beat, and the Vite frontend.
+
+Open the app at `http://localhost:5173`.
+Backend docs are available at `http://localhost:8000/docs`.
+
+To stop the stack:
+
+```bash
+docker compose down
+```
+
+### Manual setup
+
 To run this project locally, you must have **PostgreSQL** and **Redis** (or Memurai on Windows) installed and running on your machine.
 
 ### 1. Start the Database and Message Broker

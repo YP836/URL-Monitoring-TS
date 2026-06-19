@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { useNavigate, useParams } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
+import { Download, ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
 import { checkUrlNow, getApiErrorMessage, getUrlDetail, getUrlExtraData } from '../api/client';
 import modalStyles from '../components/urls/UrlCard.module.css';
 import { CheckType, PingHistoryRead, URLDetail } from '../types';
 import { PageLayout } from '../components/layout/PageLayout';
 import { Toast } from '../components/ui/Toast';
 import { StatusDot } from '../components/ui/StatusDot';
-import { DownloadIcon, RefreshIcon } from '../components/ui/Icons';
 import { ChartSkeleton, Skeleton, StatCardSkeleton } from '../components/ui/Skeleton';
 import { MetricKey } from '../components/stats/MetricChooser';
 import { StatsRow } from '../components/stats/StatsRow';
@@ -43,6 +43,32 @@ function metricsForCheckType(checkType: string | undefined): MetricKey[] {
   return [...metrics, 'lastChecked'];
 }
 
+const statusMeta: Record<string, { label: string; className: string; summary: string }> = {
+  UP: { label: 'Operational', className: 'is-up', summary: 'All primary checks are reporting normally.' },
+  WARN: { label: 'Degraded', className: 'is-warn', summary: 'A signal needs attention, but the monitor is still responding.' },
+  DOWN: { label: 'Incident', className: 'is-down', summary: 'The latest HTTP availability check did not succeed.' },
+  PENDING: { label: 'Waiting for data', className: 'is-pending', summary: 'The monitor is awaiting its first completed check.' },
+};
+
+const checkLabels: Record<CheckType, string> = {
+  HTTP: 'HTTP availability',
+  SSL_EXPIRY: 'SSL certificate',
+  TTFB: 'Time to first byte',
+  KEYWORD: 'Keyword scan',
+  DOWNTIME_DURATION: 'Downtime analysis',
+  ERROR_RATE: 'Error rate',
+};
+
+function formatInterval(seconds?: number): string {
+  if (!seconds || seconds < 60) return `${seconds ?? 30}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  return `${Math.round(seconds / 3600)}h`;
+}
+
+function formatCheckType(checkType?: CheckType | null): string {
+  return checkType ? checkLabels[checkType] : 'HTTP availability';
+}
+
 export function UrlDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -58,6 +84,7 @@ export function UrlDetailPage() {
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [uptimeWindow, setUptimeWindow] = useState('30d');
+  const shouldReduceMotion = useReducedMotion();
   const { lastMessage, isConnected, connectionError } = useWebSocket(buildWsUrl(import.meta.env.VITE_API_BASE_URL));
 
   useEffect(() => {
@@ -77,7 +104,6 @@ export function UrlDetailPage() {
         if (!mounted) return;
         setUrl(data);
         setLivePings(data.recent_pings);
-        setExtraData(data.recent_pings[0]?.extra_data ?? null);
         setError(null);
         document.title = `${data.name} - Uptime Monitor`;
       })
@@ -130,6 +156,10 @@ export function UrlDetailPage() {
   const selectedChecks = splitCheckTypes(url?.check_type);
   const showLatencyChart = selectedChecks.includes('HTTP');
   const showUptimeChart = selectedChecks.includes('HTTP');
+  const status = statusMeta[currentStatus] ?? statusMeta.PENDING;
+  const latestCheckedAt = lastMessage?.url_id === urlId
+    ? lastMessage.checked_at
+    : livePings[0]?.checked_at ?? url?.created_at;
   const handleCheckNow = async () => {
     if (!hasValidUrlId) return;
     setIsChecking(true);
@@ -138,12 +168,12 @@ export function UrlDetailPage() {
       const data = await getUrlDetail(urlId);
       setUrl(data);
       setLivePings(data.recent_pings);
-      setExtraData(data.recent_pings[0]?.extra_data ?? null);
       try {
         const latestExtra = await getUrlExtraData(urlId);
         setExtraData(latestExtra.extra_data);
       } catch {
         // A plain HTTP-only monitor may not have signal-specific extra data yet.
+        setExtraData(data.recent_pings[0]?.extra_data ?? null);
       }
       setToast('Check complete');
     } catch (err) {
@@ -154,56 +184,109 @@ export function UrlDetailPage() {
   };
   return (
     <PageLayout isConnected={isConnected} connectionError={connectionError}>
-      <button className="link-button" type="button" onClick={() => navigate('/monitors')}>
-        &larr; Back to monitors
+      <div className="monitor-detail-page">
+      <button className="link-button detail-back-button" type="button" onClick={() => navigate('/monitors')}>
+        <i className="ti ti-arrow-left" aria-hidden="true" />
+        All monitors
       </button>
       {isLoading && <DetailSkeleton />}
-      {showNotFound && <CenteredMessage title="Monitor not available" detail="This monitor was not found for the current account. Go back to the dashboard and choose a monitor from this workspace." />}
+      {showNotFound && (
+        <CenteredMessage
+          title="Monitor not available"
+          detail="This monitor is not in your current workspace. Choose an existing monitor or create a new one."
+          actions={
+            <>
+              <Link className="primary-link-button" to="/monitors">View monitors</Link>
+              <Link className="secondary-link-button" to="/dashboard">Go home</Link>
+            </>
+          }
+        />
+      )}
       {!isLoading && error && !showNotFound && <CenteredMessage title="Failed to load URL details" detail={error} />}
       {!isLoading && url && (
         <>
-          <header className="detail-page-header">
-            <div className="detail-title-block">
-              <div className="detail-title-row">
+          <motion.header
+            className="monitor-command-header"
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="monitor-command-main">
+              <div className={`monitor-status-emblem ${status.className}`}>
                 <StatusDot status={currentStatus} />
+              </div>
+              <div className="monitor-title-stack">
+                <div className="monitor-status-line">
+                  <span className={`monitor-status-badge ${status.className}`}>{status.label}</span>
+                  <span>Check cadence {formatInterval(url.ping_interval_seconds ?? url.check_interval_seconds)}</span>
+                </div>
                 <h1>
-                  <Favicon url={url.web_address} size={28} />
+                  <Favicon url={url.web_address} size={26} />
                   {url.name}
                 </h1>
-                <span>Checked {livePings.length} times</span>
+                <a href={url.web_address} target="_blank" rel="noopener noreferrer">
+                  <span>{url.web_address}</span>
+                  <ExternalLink size={14} aria-hidden="true" />
+                </a>
               </div>
-              <a href={url.web_address} target="_blank" rel="noopener noreferrer">
-                {url.web_address}
-              </a>
             </div>
             <div className="detail-actions">
-              <button className="outline-button" type="button" onClick={handleCheckNow}>
-                <RefreshIcon className={isChecking ? 'spin-icon' : undefined} size={14} />
-                Check now
+              <button className="outline-button action-button" type="button" onClick={handleCheckNow} disabled={isChecking} aria-busy={isChecking}>
+                <RefreshCw className={isChecking ? 'spin-icon' : undefined} size={15} aria-hidden="true" />
+                {isChecking ? 'Checking' : 'Run check'}
               </button>
               <button className="primary save-report-button" type="button" onClick={() => setIsReportOpen(true)}>
-                <DownloadIcon size={14} />
-                Save
+                <Download size={15} aria-hidden="true" />
+                Export report
               </button>
-              <button 
-                className="outline-button" 
+              <button
+                className="icon-only-button danger-action"
                 type="button" 
-                style={{ color: '#E24B4A', borderColor: '#E24B4A' }}
                 onClick={() => setIsConfirmingDelete(true)}
+                title="Delete monitor"
+                aria-label="Delete monitor"
               >
-                Delete
+                <Trash2 size={16} aria-hidden="true" />
               </button>
             </div>
-          </header>
-          <StatsRow pings={livePings} visibleMetrics={visibleMetrics} extraData={extraData} uptimeWindow={uptimeWindow} setUptimeWindow={setUptimeWindow} />
+          </motion.header>
+
+          <section className={`monitor-live-summary ${status.className}`} aria-label="Current monitor status">
+            <div>
+              <span className="monitor-summary-label">Current signal</span>
+              <strong>{status.summary}</strong>
+            </div>
+            <div className="monitor-summary-meta">
+              <span><i className="ti ti-clock" aria-hidden="true" /> {latestCheckedAt ? `Checked ${timeAgo(latestCheckedAt)}` : 'No completed check'}</span>
+              <span><i className="ti ti-list-check" aria-hidden="true" /> {livePings.length} recorded checks</span>
+            </div>
+          </section>
+
+          <section className="monitor-signals-section" aria-labelledby="monitor-signals-title">
+            <div className="detail-section-heading compact">
+              <div>
+                <p>Signal coverage</p>
+                <h2 id="monitor-signals-title">Live monitor metrics</h2>
+              </div>
+              <div className="monitor-check-chips" aria-label="Enabled monitor checks">
+                {selectedChecks.map((check) => <span key={check}>{checkLabels[check]}</span>)}
+              </div>
+            </div>
+            <StatsRow pings={livePings} visibleMetrics={visibleMetrics} extraData={extraData} uptimeWindow={uptimeWindow} />
+          </section>
+
+          <div className="monitor-chart-grid">
           {showUptimeChart && (
             <Section 
-              title={`Uptime - last ${uptimeWindow === '24h' ? '24 hours' : uptimeWindow === '7d' ? '7 days' : uptimeWindow === '30d' ? '30 days' : '90 days'}`}
+              eyebrow="Availability history"
+              title={`Uptime over the last ${uptimeWindow === '24h' ? '24 hours' : uptimeWindow === '7d' ? '7 days' : uptimeWindow === '30d' ? '30 days' : '90 days'}`}
+              description="Availability is calculated from recorded HTTP checks in the selected time window."
               action={
                 <select 
+                  aria-label="Uptime history window"
                   value={uptimeWindow}
                   onChange={(e) => setUptimeWindow(e.target.value)}
-                  style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '6px', color: '#374151', fontSize: '13px', cursor: 'pointer', outline: 'none', padding: '6px 12px' }}
+                  className="monitor-window-select"
                 >
                   <option value="24h">24 hours</option>
                   <option value="7d">7 days</option>
@@ -215,7 +298,16 @@ export function UrlDetailPage() {
               <UptimeBar pings={livePings} uptimeWindow={uptimeWindow} />
             </Section>
           )}
-          {showLatencyChart && <Section title="Response time - last 50 pings"><LatencyChart pings={livePings} /></Section>}
+          {showLatencyChart && (
+            <Section
+              eyebrow="Performance trend"
+              title="Response time"
+              description="Latest 50 records. Failed checks are marked on the time series."
+            >
+              <LatencyChart pings={livePings} />
+            </Section>
+          )}
+          </div>
           <RecentChecks pings={livePings} />
           <AnimatePresence>
             {isReportOpen && (
@@ -232,6 +324,7 @@ export function UrlDetailPage() {
           </AnimatePresence>
         </>
       )}
+      </div>
       {createPortal(
         <AnimatePresence>
           {isConfirmingDelete && url && (
@@ -281,9 +374,9 @@ export function UrlDetailPage() {
 }
 function DetailSkeleton() {
   return (
-    <div>
-      <Skeleton width="60%" height={32} />
-      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16, margin: '32px 0' }}>
+    <div className="monitor-detail-skeleton">
+      <Skeleton width="48%" height={34} />
+      <div className="monitor-metrics-grid">
         {Array.from({ length: 4 }, (_, index) => <StatCardSkeleton key={index} />)}
       </div>
       <ChartSkeleton height={28} />
@@ -291,36 +384,71 @@ function DetailSkeleton() {
     </div>
   );
 }
-function CenteredMessage({ title, detail }: { title: string; detail?: string }) {
-  return <div className="center-state"><div className="state-card"><div>{title}</div>{detail && <p>{detail}</p>}</div></div>;
-}
-function Section({ title, action, children }: { title: string | ReactNode; action?: ReactNode; children: ReactNode }) {
+function CenteredMessage({ title, detail, actions }: { title: string; detail?: string; actions?: ReactNode }) {
   return (
-    <section style={{ marginBottom: 40 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600, color: '#111827', margin: 0 }}>{title}</h2>
+    <div className="center-state detail-empty-state">
+      <div className="state-card detail-empty-card">
+        <div className="detail-empty-icon"><i className="ti ti-radar-off" aria-hidden="true" /></div>
+        <h2>{title}</h2>
+        {detail && <p>{detail}</p>}
+        {actions && <div className="detail-empty-actions">{actions}</div>}
+      </div>
+    </div>
+  );
+}
+function Section({ eyebrow, title, description, action, children }: { eyebrow: string; title: string | ReactNode; description: string; action?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="monitor-chart-panel">
+      <div className="detail-section-heading">
+        <div>
+          <p>{eyebrow}</p>
+          <h2>{title}</h2>
+          <span>{description}</span>
+        </div>
         {action && <div>{action}</div>}
       </div>
-      <div className="console-panel">{children}</div>
+      <div className="monitor-chart-surface">{children}</div>
     </section>
   );
 }
 function RecentChecks({ pings }: { pings: PingHistoryRead[] }) {
   return (
-    <section>
-      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: '#111827' }}>Recent checks</h2>
-      <table className="premium-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+    <section className="recent-checks-panel" aria-labelledby="recent-checks-title">
+      <div className="detail-section-heading">
+        <div>
+          <p>Audit trail</p>
+          <h2 id="recent-checks-title">Recent checks</h2>
+          <span>Latest check output recorded for this monitor.</span>
+        </div>
+        <span className="recent-checks-count">{Math.min(pings.length, 20)} shown</span>
+      </div>
+      <div className="recent-checks-table-wrap">
+      <table className="recent-checks-table">
+        <thead>
+          <tr>
+            <th scope="col">Checked</th>
+            <th scope="col">Signal</th>
+            <th scope="col">Result</th>
+            <th scope="col">Response</th>
+            <th scope="col">HTTP</th>
+          </tr>
+        </thead>
         <tbody>
-          {pings.slice(0, 20).map((ping, index) => (
-            <tr key={ping.id} style={{ backgroundColor: index % 2 === 0 ? 'rgba(255,255,255,0.045)' : 'rgba(255,255,255,0.025)' }}>
-              <td style={{ padding: '12px 8px' }}>{timeAgo(ping.checked_at)}</td>
-              <td style={{ padding: '12px 8px', color: ping.is_up ? '#1D9E75' : '#E24B4A', fontWeight: 500 }}>{ping.is_up ? 'UP' : 'DOWN'}</td>
-              <td style={{ padding: '12px 8px' }}>{ping.response_time_ms !== null ? `${ping.response_time_ms}ms` : '-'}</td>
-              <td style={{ padding: '12px 8px' }}>{ping.status_code ?? '-'}</td>
+          {pings.slice(0, 20).map((ping) => (
+            <tr key={ping.id}>
+              <td data-label="Checked">{timeAgo(ping.checked_at)}</td>
+              <td data-label="Signal"><span className="signal-name">{formatCheckType(ping.check_type)}</span></td>
+              <td data-label="Result"><span className={`check-result ${ping.is_up ? 'is-up' : 'is-down'}`}>{ping.is_up ? 'Passed' : 'Failed'}</span></td>
+              <td data-label="Response">{ping.response_time_ms !== null ? `${ping.response_time_ms}ms` : 'No response'}</td>
+              <td data-label="HTTP">{ping.status_code ?? '—'}</td>
             </tr>
           ))}
+          {pings.length === 0 && (
+            <tr><td className="recent-checks-empty" colSpan={5}>No completed checks have been recorded yet.</td></tr>
+          )}
         </tbody>
       </table>
+      </div>
     </section>
   );
 }

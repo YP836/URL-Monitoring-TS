@@ -9,9 +9,10 @@ interface LatencyChartProps {
 
 export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
   const [showLatestHighlight, setShowLatestHighlight] = useState(false);
+  const httpPings = pings.filter((ping) => !ping.check_type || ping.check_type === 'HTTP');
 
   useEffect(() => {
-    if (pings.length === 0) {
+    if (httpPings.length === 0) {
       return undefined;
     }
 
@@ -19,9 +20,9 @@ export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
     const timeout = setTimeout(() => setShowLatestHighlight(false), 1500);
 
     return () => clearTimeout(timeout);
-  }, [pings.length]);
+  }, [httpPings.length]);
 
-  if (pings.length === 0) {
+  if (httpPings.length === 0) {
     return (
       <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280' }}>
         No ping history yet
@@ -30,7 +31,7 @@ export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
   }
 
   // Take last 50 and reverse to chronological order (oldest left, newest right)
-  const data = [...pings].slice(0, 50).reverse().map(ping => {
+  const data = [...httpPings].slice(0, 50).reverse().map(ping => {
     const d = new Date(ping.checked_at);
     return {
       timeLabel: `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`,

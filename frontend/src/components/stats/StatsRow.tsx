@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { CheckType, PingHistoryRead } from '../../types';
 import { MetricKey } from './MetricChooser';
 import { parseApiDate, timeAgo } from '../../utils/dates';
@@ -8,7 +8,17 @@ interface StatsRowProps {
   visibleMetrics?: MetricKey[];
   extraData?: Record<string, unknown> | null;
   uptimeWindow?: string;
-  setUptimeWindow?: (window: string) => void;
+}
+
+type MetricTone = 'neutral' | 'good' | 'warning' | 'danger';
+
+interface MetricCard {
+  key: MetricKey;
+  label: string;
+  value: string;
+  detail: string;
+  icon: string;
+  tone: MetricTone;
 }
 
 function computeAvgLatency(pings: PingHistoryRead[]): string {
@@ -61,6 +71,13 @@ function getString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null;
 }
 
+function metricToneFor(value: number | null, goodWhen: (number: number) => boolean, warningWhen: (number: number) => boolean): MetricTone {
+  if (value === null) return 'neutral';
+  if (goodWhen(value)) return 'good';
+  if (warningWhen(value)) return 'warning';
+  return 'danger';
+}
+
 function getExtraDataForCheck(checkType: CheckType, extraData: Record<string, unknown> | null) {
   if (!extraData) return null;
   const nestedExtraData = extraData[checkType];
@@ -72,8 +89,8 @@ export function StatsRow({
   visibleMetrics = ['avgLatency', 'p95Latency', 'uptime', 'lastChecked'],
   extraData = null,
   uptimeWindow = '30d',
-  setUptimeWindow,
 }: StatsRowProps) {
+  const shouldReduceMotion = useReducedMotion();
   const avgLatency = computeAvgLatency(pings);
   const p95Latency = computeP95Latency(pings);
   const uptimeVal = computeUptime(pings, uptimeWindow);
@@ -91,75 +108,58 @@ export function StatsRow({
   const downtimeMinutes30d = downtimeData ? getNumber(downtimeData.downtime_minutes_30d) : null;
   const errorRatePct = errorRateData ? getNumber(errorRateData.error_rate_pct) : null;
 
-  const cardStyle = {
-    backgroundColor: '#FFFFFF',
-    border: '1px solid rgba(0, 0, 0, 0.05)',
-    borderRadius: 8,
-    padding: '12px 16px',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 4,
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
-  };
-
-  const labelStyle = {
-    fontSize: 12,
-    color: '#6B7280',
-  };
-
-  const valueStyle = {
-    fontSize: 20,
-    fontWeight: 500,
-    color: '#111827',
-  };
-
-  const cards: Array<{ key: MetricKey; label: string | React.ReactNode; value: string }> = [
-    { key: 'avgLatency', label: 'Avg latency', value: avgLatency },
-    { key: 'p95Latency', label: 'P95 latency', value: p95Latency },
-    { 
-      key: 'uptime', 
-      label: setUptimeWindow ? (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          Uptime
-          <select 
-            value={uptimeWindow}
-            onChange={(e) => setUptimeWindow(e.target.value)}
-            style={{ background: 'transparent', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'inherit', fontSize: 'inherit', cursor: 'pointer', outline: 'none', padding: '0 4px', lineHeight: 1 }}
-          >
-            <option value="24h">24h</option>
-            <option value="7d">7d</option>
-            <option value="30d">30d</option>
-            <option value="90d">90d</option>
-          </select>
-        </span>
-      ) : `Uptime (${uptimeWindow})`, 
-      value: uptimeVal 
+  const uptimeNumber = uptimeVal === '-' ? null : Number.parseFloat(uptimeVal);
+  const cards: MetricCard[] = [
+    { key: 'avgLatency', label: 'Average latency', value: avgLatency, detail: 'Successful checks', icon: 'ti-bolt', tone: 'neutral' },
+    { key: 'p95Latency', label: 'P95 latency', value: p95Latency, detail: 'Slowest 5% of checks', icon: 'ti-chart-line', tone: 'neutral' },
+    {
+      key: 'uptime',
+      label: `Uptime (${uptimeWindow})`,
+      value: uptimeVal,
+      detail: 'Availability from HTTP checks',
+      icon: 'ti-activity-heartbeat',
+      tone: metricToneFor(uptimeNumber, (value) => value >= 99.9, (value) => value >= 99),
     },
-    { key: 'lastChecked', label: 'Last checked', value: lastChecked },
+    { key: 'lastChecked', label: 'Last checked', value: lastChecked, detail: 'Latest recorded result', icon: 'ti-clock-check', tone: 'neutral' },
     {
       key: 'sslExpiry',
-      label: 'SSL expiry',
+      label: 'SSL certificate',
       value: sslDaysRemaining === null ? 'Waiting for check' : `${sslDaysRemaining} days`,
+      detail: 'Remaining until expiry',
+      icon: 'ti-shield-check',
+      tone: metricToneFor(sslDaysRemaining, (value) => value > 30, (value) => value >= 7),
     },
     {
       key: 'ttfb',
-      label: 'TTFB',
+      label: 'Time to first byte',
       value: ttfbMs === null ? 'Waiting for check' : `${ttfbMs}ms`,
+      detail: 'Initial server response',
+      icon: 'ti-timeline-event',
+      tone: metricToneFor(ttfbMs, (value) => value < 200, (value) => value < 800),
     },
     {
       key: 'keyword',
-      label: 'Keyword',
+      label: 'Keyword check',
       value: keywordFound === null ? 'Waiting for check' : `${keyword ?? 'Keyword'} ${keywordFound ? 'found' : 'not found'}`,
+      detail: 'Latest page content scan',
+      icon: 'ti-search',
+      tone: keywordFound === null ? 'neutral' : keywordFound ? 'good' : 'danger',
     },
     {
       key: 'downtimeDuration',
       label: 'Downtime (30d)',
       value: downtimeMinutes30d === null ? 'Waiting for check' : `${downtimeMinutes30d} min`,
+      detail: 'Derived from HTTP availability',
+      icon: 'ti-hourglass-low',
+      tone: metricToneFor(downtimeMinutes30d, (value) => value === 0, (value) => value < 60),
     },
     {
       key: 'errorRate',
       label: 'Error rate',
       value: errorRatePct === null ? 'Waiting for check' : `${errorRatePct.toFixed(1)}%`,
+      detail: 'Last 100 HTTP checks',
+      icon: 'ti-alert-triangle',
+      tone: metricToneFor(errorRatePct, (value) => value < 1, (value) => value < 10),
     },
   ];
 
@@ -175,14 +175,8 @@ export function StatsRow({
 
   return (
     <motion.div
-      className="stats-grid"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-        gap: 16,
-        marginBottom: 32,
-      }}
-      initial="hidden"
+      className="monitor-metrics-grid"
+      initial={shouldReduceMotion ? false : 'hidden'}
       animate="visible"
       variants={{
         hidden: {},
@@ -195,17 +189,21 @@ export function StatsRow({
     >
       {visibleCards.map((card) => (
         <motion.div
-          style={cardStyle}
+          className={`monitor-metric-card tone-${card.tone}`}
           key={card.key}
           variants={{
             hidden: { opacity: 0, y: 18, scale: 0.985 },
             visible: { opacity: 1, y: 0, scale: 1 },
           }}
-          transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-          whileHover={{ y: -3, boxShadow: '0 14px 36px rgba(245, 101, 101, 0.1)' }}
+          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          whileHover={shouldReduceMotion ? undefined : { y: -2 }}
         >
-          <div style={labelStyle}>{card.label}</div>
-          <div style={valueStyle}>{card.value}</div>
+          <div className="monitor-metric-topline">
+            <span>{card.label}</span>
+            <i className={`ti ${card.icon}`} aria-hidden="true" />
+          </div>
+          <strong>{card.value}</strong>
+          <small>{card.detail}</small>
         </motion.div>
       ))}
     </motion.div>

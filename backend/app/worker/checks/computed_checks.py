@@ -67,7 +67,9 @@ def run_downtime_duration_check(url_id: int, conn) -> CheckResult:
             """
             SELECT checked_at, is_up
             FROM ping_history
-            WHERE url_id = %s AND checked_at >= %s
+            WHERE url_id = %s
+              AND checked_at >= %s
+              AND (check_type = 'HTTP' OR check_type IS NULL)
             ORDER BY checked_at ASC
             """,
             (url_id, thirty_days_ago),
@@ -108,6 +110,7 @@ def run_error_rate_check(url_id: int, conn) -> CheckResult:
             SELECT is_up
             FROM ping_history
             WHERE url_id = %s
+              AND (check_type = 'HTTP' OR check_type IS NULL)
             ORDER BY checked_at DESC
             LIMIT 100
             """,

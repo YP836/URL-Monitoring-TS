@@ -12,7 +12,6 @@ import { useUrls } from '../hooks/useUrls';
 import { buildWsUrl, useWebSocket } from '../hooks/useWebSocket';
 import { useLiveStatus } from '../hooks/useLiveStatus';
 import { URLItem, URLStatus } from '../types';
-import { FleetMonitor } from '../data/demoMonitors';
 import { timeAgo } from '../utils/dates';
 
 export type OperationsView =
@@ -39,7 +38,7 @@ const viewCopy: Record<OperationsView, { kicker: string; title: string; descript
   monitors: {
     kicker: 'Monitor fleet',
     title: 'All website monitors',
-    description: 'Review every live and demo endpoint, its current status, latency, owner, and check cadence.',
+    description: 'Review every monitored endpoint, its current status, latency, owner, and check cadence.',
   },
   incidents: {
     kicker: 'Incident response',
@@ -107,6 +106,17 @@ const reportCards = [
   ['Status-page summary', 'Subscriber-visible service health snapshot', 'Public view'],
 ];
 
+interface FleetMonitor extends URLItem {
+  latency_ms: number | null;
+  p95_latency_ms: number | null;
+  uptime_pct: number;
+  region: string;
+  owner: string;
+  last_checked_at: string;
+  next_check: string;
+  incident_note?: string;
+}
+
 function formatInterval(seconds?: number): string {
   if (!seconds) return '30s';
   if (seconds < 60) return `${seconds}s`;
@@ -148,7 +158,7 @@ function toLiveFleetMonitor(url: URLItem, lastPingMap: Record<number, { latency_
     name: url.name,
     web_address: url.web_address,
     status: url.status,
-    source: 'live',
+    created_at: url.created_at,
     latency_ms: latency,
     p95_latency_ms: latency === null ? null : Math.round(latency * 1.55),
     uptime_pct: estimateUptime(url.status, uptimeWindow),
@@ -185,10 +195,6 @@ function StatusPill({ status }: { status: URLStatus }) {
       {meta.label}
     </span>
   );
-}
-
-function SourcePill({ source }: { source: 'live' | 'demo' }) {
-  return <span className={`ops-source-pill ${source}`}>{source === 'live' ? 'Live' : 'Demo'}</span>;
 }
 
 interface ThinksysAboutRow {
@@ -309,7 +315,6 @@ function FleetTable({ monitors, onInspect, onDeleteClick, uptimeWindow, setUptim
                   <span>URL: {monitor.web_address}</span>
                   <div className="ops-mobile-row">
                     <StatusPill status={monitor.status} />
-                    <SourcePill source={monitor.source} />
                   </div>
                 </div>
               </td>
@@ -345,18 +350,14 @@ function FleetTable({ monitors, onInspect, onDeleteClick, uptimeWindow, setUptim
                 <small>Next {monitor.next_check}</small>
               </td>
               <td>
-                {monitor.source === 'live' ? (
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button type="button" className="ops-table-action" onClick={() => onInspect(monitor.id)}>
-                      Inspect
-                    </button>
-                    <button type="button" className="ops-table-action" style={{ color: '#E24B4A' }} onClick={() => onDeleteClick(monitor)}>
-                      Delete
-                    </button>
-                  </div>
-                ) : (
-                  <SourcePill source="demo" />
-                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" className="ops-table-action" onClick={() => onInspect(monitor.id)}>
+                    Inspect
+                  </button>
+                  <button type="button" className="ops-table-action" style={{ color: '#E24B4A' }} onClick={() => onDeleteClick(monitor)}>
+                    Delete
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -622,7 +623,7 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
 
   const renderMetrics = () => (
     <section className="ops-metric-grid">
-      <DashboardMetric label="Monitors" value={String(metrics.total)} detail={`${liveUrls.length} live + ${metrics.total - liveUrls.length} demo`} />
+      <DashboardMetric label="Monitors" value={String(metrics.total)} detail={`${liveUrls.length} active endpoints`} />
       <DashboardMetric label="Fleet uptime" value={formatPct(metrics.avgUptime)} detail="Average across visible fleet" tone="good" />
       <DashboardMetric label="Active incidents" value={String(metrics.active)} detail={`${metrics.down} down, ${metrics.warn} warning`} tone={metrics.active ? 'warn' : 'good'} />
       <DashboardMetric label="P95 latency" value={formatMs(metrics.p95)} detail={`Median sample ${formatMs(metrics.avgLatency)}`} />
@@ -648,7 +649,7 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
             <p className="ops-kicker">Monitor matrix</p>
             <h3>15-site operational fleet</h3>
           </div>
-          <Badge variant="neutral" label="Demo rows are presentation safe" />
+          <Badge variant="neutral" label="Production-style fleet" />
         </div>
         <FleetTable monitors={fleetMonitors} onInspect={handleInspectMonitor} onDeleteClick={setMonitorToDelete} uptimeWindow={uptimeWindow} setUptimeWindow={setUptimeWindow} />
       </div>
@@ -690,7 +691,7 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
     <section className="ops-card-grid">
       <OperationalCard icon="ti-world-share" title="Public status page" value="Live draft" detail="Customer-facing uptime, incidents, and maintenance announcements." />
       <OperationalCard icon="ti-lock" title="Internal status page" value="Private" detail="Engineering-only page with owners, regions, and raw signal health." />
-      <OperationalCard icon="ti-users" title="Subscribers" value="128 demo" detail="Email subscribers can receive issue and maintenance updates." />
+      <OperationalCard icon="ti-users" title="Subscribers" value="128" detail="Email subscribers can receive issue and maintenance updates." />
       <OperationalCard icon="ti-components" title="Components" value="8 services" detail="Group monitors into API, web, database, payments, and edge." />
     </section>
   );
@@ -870,7 +871,7 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
 
         {error && (
           <Toast
-            message={`${error}. Showing demo monitors so the console remains usable.`}
+            message={`${error}. Refresh the page once the backend is reachable.`}
             onDismiss={clearError}
           />
         )}
