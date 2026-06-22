@@ -1,5 +1,6 @@
 import psycopg2
 import os
+import bcrypt
 from urllib.parse import urlparse
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/uptime_monitor")
@@ -11,6 +12,18 @@ def migrate_url_uniqueness(cur):
     cur.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS urls_user_web_address_unique
         ON urls (user_id, web_address)
+    """)
+
+
+def migrate_incidents_columns(cur):
+    cur.execute("""
+        ALTER TABLE url_incidents
+          ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS note TEXT
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_url_incidents_open
+        ON url_incidents (url_id) WHERE resolved_at IS NULL
     """)
 
 
@@ -45,6 +58,47 @@ def migrate_monitor_columns(cur):
           severity VARCHAR(10) NOT NULL
         )
     """)
+
+ADMIN_EMAILS = [
+    "pathania.yuvraj@thinksys.com",
+    "singh.yatharth@thinksys.com",
+]
+
+
+def migrate_role_column(cur):
+    """Add role column to users table. Existing users default to 'admin'."""
+    cur.execute("""
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS role VARCHAR(10) NOT NULL DEFAULT 'viewer'
+    """)
+    # Ensure the two fixed admin accounts always have admin role
+    for email in ADMIN_EMAILS:
+        cur.execute(
+            "UPDATE users SET role = 'admin' WHERE email = %s",
+            (email,)
+        )
+
+
+def seed_admin_accounts(cur):
+    """Upsert the two fixed admin accounts with password 'password123'."""
+    hashed = bcrypt.hashpw(b"password123", bcrypt.gensalt()).decode("utf-8")
+    admin_accounts = [
+        ("Yuvraj Pathania", "pathania.yuvraj@thinksys.com"),
+        ("Yatharth Singh", "singh.yatharth@thinksys.com"),
+    ]
+    for full_name, email in admin_accounts:
+        cur.execute(
+            """
+            INSERT INTO users (full_name, email, hashed_password, role)
+            VALUES (%s, %s, %s, 'admin')
+            ON CONFLICT (email) DO UPDATE
+            SET hashed_password = EXCLUDED.hashed_password,
+                role = 'admin'
+            """,
+            (full_name, email, hashed),
+        )
+    print(f"Seeded {len(admin_accounts)} admin accounts.")
+
 
 def init_db():
     try:
@@ -96,6 +150,15 @@ def init_db():
         print("Ensuring URL uniqueness is scoped per user...")
         migrate_monitor_columns(cur)
         migrate_url_uniqueness(cur)
+
+        print("Adding role column to users...")
+        migrate_role_column(cur)
+
+        print("Migrating incidents columns...")
+        migrate_incidents_columns(cur)
+
+        print("Seeding admin accounts...")
+        seed_admin_accounts(cur)
         
         print("Successfully initialized all database tables!")
         cur.close()

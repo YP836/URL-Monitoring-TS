@@ -6,6 +6,7 @@ import { LaunchPage } from './pages/LaunchPage';
 import { UrlDetailPage } from './pages/UrlDetailPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
+import { TeamPage } from './pages/TeamPage';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -44,6 +45,7 @@ function App() {
             <Route path="/reports" element={<ProtectedRoute><Dashboard view="reports" /></ProtectedRoute>} />
             <Route path="/integrations" element={<ProtectedRoute><Dashboard view="integrations" /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Dashboard view="settings" /></ProtectedRoute>} />
+            <Route path="/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
             <Route path="/urls/:id" element={<ProtectedRoute><UrlDetailPage /></ProtectedRoute>} />
             
             <Route path="*" element={<NotFoundPage />} />

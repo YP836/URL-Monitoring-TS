@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from starlette.concurrency import run_in_threadpool
 from typing import Annotated
-from ..auth import get_current_user
+from ..auth import get_current_user, require_admin
 from ..models import UserRead
 
 from ..database import get_connection
@@ -57,15 +57,27 @@ async def list_urls(current_user: Annotated[UserRead, Depends(get_current_user)]
     """Retrieve all monitored URLs."""
     try:
         async with get_connection() as conn:
-            rows = await conn.fetch(
-                """
-                SELECT
-                    id, web_address, name, status, created_at, check_type, keyword_to_find,
-                    check_interval_seconds, ping_interval_seconds
-                FROM urls WHERE user_id = $1
-                ORDER BY created_at DESC
-                """
-            , current_user.id)
+            if current_user.role == "admin":
+                rows = await conn.fetch(
+                    """
+                    SELECT
+                        urls.id, urls.web_address, urls.name, urls.status, urls.created_at, urls.check_type, urls.keyword_to_find,
+                        urls.check_interval_seconds, urls.ping_interval_seconds, users.email as owner_email
+                    FROM urls
+                    LEFT JOIN users ON urls.user_id = users.id
+                    ORDER BY urls.created_at DESC
+                    """
+                )
+            else:
+                rows = await conn.fetch(
+                    """
+                    SELECT
+                        id, web_address, name, status, created_at, check_type, keyword_to_find,
+                        check_interval_seconds, ping_interval_seconds
+                    FROM urls WHERE user_id = $1
+                    ORDER BY created_at DESC
+                    """, current_user.id
+                )
             return [URLRead(**dict(row)) for row in rows]
     except Exception:
         return list(_mock_urls.values())
@@ -281,7 +293,11 @@ async def update_url(url_id: int, payload: URLUpdate, current_user: Annotated[Us
     """Update mutable URL fields without changing its selected monitoring signals."""
     try:
         async with get_connection() as conn:
-            existing = await conn.fetchrow("SELECT * FROM urls WHERE id = $1 AND user_id = $2", url_id, current_user.id)
+            if current_user.role == "admin":
+                existing = await conn.fetchrow("SELECT * FROM urls WHERE id = $1", url_id)
+            else:
+                existing = await conn.fetchrow("SELECT * FROM urls WHERE id = $1 AND user_id = $2", url_id, current_user.id)
+            
             if not existing:
                 raise HTTPException(status_code=404, detail="URL not found")
 
@@ -297,7 +313,7 @@ async def update_url(url_id: int, payload: URLUpdate, current_user: Annotated[Us
                 """
                 UPDATE urls
                 SET web_address = $1, name = $2, ping_interval_seconds = $3, check_interval_seconds = $3
-                WHERE id = $4 AND user_id = $5
+                WHERE id = $4
                 RETURNING
                     id, web_address, name, status, created_at, check_type, keyword_to_find,
                     check_interval_seconds, ping_interval_seconds
@@ -306,7 +322,6 @@ async def update_url(url_id: int, payload: URLUpdate, current_user: Annotated[Us
                 new_name,
                 new_interval,
                 url_id,
-                current_user.id,
             )
             return URLRead(**dict(row))
     except HTTPException:
@@ -332,7 +347,11 @@ async def delete_url(url_id: int, current_user: Annotated[UserRead, Depends(get_
     """Delete a monitored URL."""
     try:
         async with get_connection() as conn:
-            result = await conn.execute("DELETE FROM urls WHERE id = $1 AND user_id = $2", url_id, current_user.id)
+            if current_user.role == "admin":
+                result = await conn.execute("DELETE FROM urls WHERE id = $1", url_id)
+            else:
+                result = await conn.execute("DELETE FROM urls WHERE id = $1 AND user_id = $2", url_id, current_user.id)
+            
             if result == "DELETE 0":
                 raise HTTPException(status_code=404, detail="URL not found")
             return

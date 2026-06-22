@@ -12,6 +12,7 @@ import { Toast } from '../components/ui/Toast';
 import { StatusDot } from '../components/ui/StatusDot';
 import { ChartSkeleton, Skeleton, StatCardSkeleton } from '../components/ui/Skeleton';
 import { MetricKey } from '../components/stats/MetricChooser';
+import { useAuth } from '../contexts/AuthContext';
 import { StatsRow } from '../components/stats/StatsRow';
 import { UptimeBar } from '../components/charts/UptimeBar';
 import { LatencyChart } from '../components/charts/LatencyChart';
@@ -72,6 +73,7 @@ function formatCheckType(checkType?: CheckType | null): string {
 export function UrlDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const urlId = Number(id);
   const hasValidUrlId = Number.isInteger(urlId) && urlId > 0;
   const [url, setUrl] = useState<URLDetail | null>(null);

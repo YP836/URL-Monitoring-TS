@@ -6,6 +6,7 @@ interface AuthContextType {
   user: UserRead | null;
   token: string | null;
   isLoading: boolean;
+  isAdmin: boolean;
   login: (token: string) => void;
   logout: () => void;
 }
@@ -16,6 +17,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserRead | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
+
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     if (token) {
@@ -48,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, isAdmin, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -61,3 +64,4 @@ export function useAuth() {
   }
   return context;
 }
+

@@ -45,9 +45,19 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> Use
 
     async with get_connection() as conn:
         record = await conn.fetchrow(
-            "SELECT id, full_name, email, created_at FROM users WHERE email = $1",
+            "SELECT id, full_name, email, role, created_at FROM users WHERE email = $1",
             token_data.email
         )
         if record is None:
             raise credentials_exception
         return UserRead(**dict(record))
+
+
+async def require_admin(current_user: Annotated[UserRead, Depends(get_current_user)]) -> UserRead:
+    """Dependency that ensures the current user has the 'admin' role."""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user

@@ -6,12 +6,23 @@ export interface URLItem {
   id: number;
   web_address: string;
   name: string;
-  status: URLStatus;
+  status: 'PENDING' | 'UP' | 'DOWN' | 'WARN';
   created_at: string;
-  check_type?: string;
+  check_type?: CheckType | null;
   keyword_to_find?: string | null;
-  check_interval_seconds?: number;
-  ping_interval_seconds?: number;
+  check_interval_seconds: number;
+  ping_interval_seconds: number;
+  owner_email?: string | null;
+}
+
+export interface AdminUserOverview extends UserRead {
+  url_count: number;
+}
+
+export interface UserUpdate {
+  full_name?: string;
+  email?: string;
+  role?: string;
 }
 
 export interface PingResult {
@@ -52,5 +63,20 @@ export interface UserRead {
   id: number;
   full_name: string;
   email: string;
+  role: 'admin' | 'viewer';
   created_at: string;
+}
+
+export interface Incident {
+  id: number;
+  url_id: number;
+  url_name: string;
+  url_address: string;
+  started_at: string;
+  resolved_at: string | null;
+  check_type: string;
+  severity: 'DOWN' | 'WARN';
+  acknowledged_at: string | null;
+  note: string | null;
+  duration_minutes: number | null;
 }

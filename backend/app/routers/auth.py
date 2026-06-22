@@ -22,9 +22,9 @@ async def signup(user: UserCreate):
         hashed_password = get_password_hash(user.password)
         row = await conn.fetchrow(
             """
-            INSERT INTO users (full_name, email, hashed_password)
-            VALUES ($1, $2, $3)
-            RETURNING id, full_name, email, created_at
+            INSERT INTO users (full_name, email, hashed_password, role)
+            VALUES ($1, $2, $3, 'viewer')
+            RETURNING id, full_name, email, role, created_at
             """,
             user.full_name,
             user.email,
@@ -37,7 +37,7 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     try:
         async with get_connection() as conn:
             user = await conn.fetchrow(
-                "SELECT id, email, hashed_password FROM users WHERE email = $1",
+                "SELECT id, email, hashed_password, role FROM users WHERE email = $1",
                 form_data.username
             )
             if not user or not verify_password(form_data.password, user["hashed_password"]):
@@ -49,7 +49,8 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
             
             access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
             access_token = create_access_token(
-                data={"sub": user["email"]}, expires_delta=access_token_expires
+                data={"sub": user["email"], "role": user["role"]},
+                expires_delta=access_token_expires,
             )
             return Token(access_token=access_token, token_type="bearer")
     except HTTPException:

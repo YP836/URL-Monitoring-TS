@@ -20,6 +20,7 @@ class UserRead(BaseModel):
     id: int
     full_name: str
     email: EmailStr
+    role: str = "viewer"
     created_at: datetime
 
 CHECK_TYPES = {"HTTP", "SSL_EXPIRY", "TTFB", "KEYWORD", "DOWNTIME_DURATION", "ERROR_RATE"}
@@ -61,12 +62,23 @@ class URLRead(BaseModel):
     keyword_to_find: str | None = None
     check_interval_seconds: int = 30
     ping_interval_seconds: int = 30
+    owner_email: str | None = None
 
 
 class URLUpdate(BaseModel):
     web_address: HttpUrl | None = None
     name: str | None = Field(None, min_length=1, max_length=100)
     ping_interval_seconds: int | None = None
+
+
+class AdminUserOverview(UserRead):
+    url_count: int
+
+
+class UserUpdate(BaseModel):
+    full_name: str | None = None
+    email: EmailStr | None = None
+    role: str | None = None
 
 
 class URLDetail(URLRead):
@@ -88,3 +100,22 @@ class URLExtraData(BaseModel):
     check_type: str
     extra_data: dict[str, Any]
     checked_at: datetime
+
+
+class IncidentRead(BaseModel):
+    id: int
+    url_id: int
+    url_name: str
+    url_address: str
+    started_at: datetime
+    resolved_at: datetime | None
+    check_type: str
+    severity: str
+    acknowledged_at: datetime | None
+    note: str | None
+    duration_minutes: int | None
+
+
+class IncidentUpdate(BaseModel):
+    acknowledged_at: datetime | None = None
+    note: str | None = None

@@ -85,10 +85,38 @@ def _write_check_results(results: list[CheckResult]) -> None:
                         ),
                     )
             
+            cur.execute("SELECT status FROM urls WHERE id = %s", (url_id,))
+            row = cur.fetchone()
+            old_status = row[0] if row else "PENDING"
+
             cur.execute(
                 "UPDATE urls SET status = %s, last_pinged_at = NOW() WHERE id = %s",
                 (overall_status, url_id),
             )
+
+            was_problem = old_status in ("DOWN", "WARN")
+            is_problem = overall_status in ("DOWN", "WARN")
+
+            if is_problem and not was_problem:
+                cur.execute(
+                    "SELECT id FROM url_incidents WHERE url_id = %s AND resolved_at IS NULL",
+                    (url_id,),
+                )
+                if not cur.fetchone():
+                    triggering_check = next(
+                        (r.check_type for r in results if r.status == overall_status),
+                        results[0].check_type,
+                    )
+                    cur.execute(
+                        """INSERT INTO url_incidents (url_id, started_at, check_type, severity)
+                           VALUES (%s, NOW(), %s, %s)""",
+                        (url_id, triggering_check, overall_status),
+                    )
+            elif not is_problem and was_problem:
+                cur.execute(
+                    "UPDATE url_incidents SET resolved_at = NOW() WHERE url_id = %s AND resolved_at IS NULL",
+                    (url_id,),
+                )
         conn.commit()
     except Exception:
         logger.exception("[ping_url] Failed to write ping results url_id=%s", url_id)
