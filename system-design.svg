@@ -1,0 +1,202 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 820" width="1380" height="820">
+<defs>
+  <marker id="ab" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4488ff"/></marker>
+  <marker id="ag" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#22cc88"/></marker>
+  <marker id="at" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#22ccaa"/></marker>
+  <marker id="ap" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#9966ff"/></marker>
+  <marker id="ao" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#ffaa33"/></marker>
+  <marker id="agr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#888888"/></marker>
+</defs>
+<rect width="1380" height="820" fill="#080814"/>
+<text x="690" y="34" text-anchor="middle" font-family="'Courier New',monospace" font-size="18" font-weight="bold" fill="#c0c8ff" letter-spacing="2">UPTIME MONITOR - SYSTEM DESIGN</text>
+<line x1="200" y1="44" x2="1180" y2="44" stroke="#1e1e40" stroke-width="1"/>
+<rect x="168" y="54" width="950" height="752" rx="12" fill="none" stroke="#1e1e40" stroke-width="1.5" stroke-dasharray="10,5"/>
+<text x="178" y="68" font-family="'Courier New',monospace" font-size="10" fill="#2e2e5e">docker compose</text>
+<rect x="14" y="310" width="146" height="180" rx="8" fill="#0a0a1e" stroke="#3a3a70" stroke-width="1.5"/>
+<text x="87" y="330" text-anchor="middle" font-family="'Courier New',monospace" font-size="13" font-weight="bold" fill="#8888cc">BROWSER</text>
+<line x1="24" y1="336" x2="150" y2="336" stroke="#1e1e40" stroke-width="1"/>
+<text x="24" y="353" font-family="'Courier New',monospace" font-size="11" fill="#c0c8ff">React 18 SPA</text>
+<text x="24" y="370" font-family="'Courier New',monospace" font-size="11" fill="#c0c8ff">axios + WebSocket</text>
+<text x="24" y="387" font-family="'Courier New',monospace" font-size="11" fill="#c0c8ff">JWT in localStorage</text>
+<text x="24" y="404" font-family="'Courier New',monospace" font-size="11" fill="#c0c8ff">framer-motion</text>
+<text x="24" y="421" font-family="'Courier New',monospace" font-size="11" fill="#c0c8ff">recharts</text>
+<text x="24" y="448" font-family="'Courier New',monospace" font-size="10" fill="#44448a">localhost:5173</text>
+<text x="24" y="462" font-family="'Courier New',monospace" font-size="10" fill="#44448a">ws://localhost:8000</text>
+<rect x="178" y="66" width="220" height="730" rx="10" fill="#04091a" stroke="#2060c0" stroke-width="2"/>
+<rect x="178" y="66" width="220" height="28" rx="10" fill="#0e2860"/>
+<text x="288" y="85" text-anchor="middle" font-family="'Courier New',monospace" font-size="13" font-weight="bold" fill="#4090ff">FRONTEND :5173</text>
+<text x="288" y="105" text-anchor="middle" font-family="'Courier New',monospace" font-size="10" fill="#3060a0">React 18 · Vite 5 · TypeScript</text>
+<text x="193" y="125" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#4090ff">Pages</text>
+<text x="193" y="142" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">/ LandingPage (3D video)</text>
+<text x="193" y="158" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">/login  /signup</text>
+<text x="193" y="174" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">/dashboard</text>
+<text x="193" y="190" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">/monitor/:id  /incidents</text>
+<line x1="188" y1="200" x2="388" y2="200" stroke="#0e2860" stroke-width="1"/>
+<text x="193" y="218" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#4090ff">Hooks</text>
+<text x="193" y="235" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">useUrls()  5 s poll</text>
+<text x="193" y="251" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">useIncidents()  30 s poll</text>
+<text x="193" y="267" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">useWebSocket()  live feed</text>
+<text x="193" y="283" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">useAuth()  JWT context</text>
+<line x1="188" y1="293" x2="388" y2="293" stroke="#0e2860" stroke-width="1"/>
+<text x="193" y="311" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#4090ff">API Client</text>
+<text x="193" y="328" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">getUrls / addUrl / deleteUrl</text>
+<text x="193" y="344" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">getIncidents / acknowledge</text>
+<text x="193" y="360" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">checkUrlNow / getUrlDetail</text>
+<line x1="188" y1="370" x2="388" y2="370" stroke="#0e2860" stroke-width="1"/>
+<text x="193" y="388" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#4090ff">Components</text>
+<text x="193" y="405" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">StatusCard · Badge · IncidentList</text>
+<text x="193" y="421" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">PingHistoryChart (recharts)</text>
+<text x="193" y="437" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">ScrollCanvas + hero.mp4</text>
+<line x1="188" y1="447" x2="388" y2="447" stroke="#0e2860" stroke-width="1"/>
+<text x="193" y="465" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#4090ff">Types</text>
+<text x="193" y="482" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">URLItem · PingHistoryRead</text>
+<text x="193" y="498" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">Incident · UserRead</text>
+<text x="193" y="514" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">CheckType (6 variants)</text>
+<line x1="188" y1="524" x2="388" y2="524" stroke="#0e2860" stroke-width="1"/>
+<text x="193" y="542" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#4090ff">UI Branches</text>
+<text x="193" y="559" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">main  standard dashboard</text>
+<text x="193" y="575" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">feat/3d-cinematic-ui</text>
+<text x="193" y="591" font-family="'Courier New',monospace" font-size="11" fill="#c0d8ff">  video bg + framer-motion</text>
+<line x1="188" y1="601" x2="388" y2="601" stroke="#0e2860" stroke-width="1"/>
+<text x="193" y="619" font-family="'Courier New',monospace" font-size="10" fill="#2a5080">Env: VITE_API_BASE_URL</text>
+<text x="193" y="635" font-family="'Courier New',monospace" font-size="10" fill="#2a5080">     VITE_API_KEY / VITE_WS_URL</text>
+<text x="193" y="651" font-family="'Courier New',monospace" font-size="10" fill="#2a5080">Build: nginx · jspdf export</text>
+<text x="193" y="667" font-family="'Courier New',monospace" font-size="10" fill="#2a5080">Auth: bcrypt · JWT 7-day expiry</text>
+<rect x="418" y="66" width="255" height="445" rx="10" fill="#0c0420" stroke="#6030b0" stroke-width="2"/>
+<rect x="418" y="66" width="255" height="28" rx="10" fill="#2a0e60"/>
+<text x="545" y="85" text-anchor="middle" font-family="'Courier New',monospace" font-size="13" font-weight="bold" fill="#9060e0">BACKEND :8000</text>
+<text x="545" y="105" text-anchor="middle" font-family="'Courier New',monospace" font-size="10" fill="#5030a0">FastAPI · uvicorn · Python 3.11</text>
+<text x="432" y="125" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#9060e0">Auth /api/v1/auth/</text>
+<text x="432" y="142" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">POST /signup  UserRead</text>
+<text x="432" y="158" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">POST /login   JWT token</text>
+<text x="432" y="174" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">GET  /me      UserRead</text>
+<line x1="428" y1="184" x2="663" y2="184" stroke="#1e0e40" stroke-width="1"/>
+<text x="432" y="202" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#9060e0">URL Monitors /api/v1/urls/</text>
+<text x="432" y="219" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">GET    /urls</text>
+<text x="432" y="235" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">POST   /urls</text>
+<text x="432" y="251" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">GET    /urls/{id}</text>
+<text x="432" y="267" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">PUT    /urls/{id}</text>
+<text x="432" y="283" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">DELETE /urls/{id}</text>
+<text x="432" y="299" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">POST   /urls/{id}/check</text>
+<text x="432" y="315" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">GET    /urls/{id}/extra</text>
+<line x1="428" y1="325" x2="663" y2="325" stroke="#1e0e40" stroke-width="1"/>
+<text x="432" y="343" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#9060e0">Incidents /api/v1/incidents/</text>
+<text x="432" y="360" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">GET   /incidents?status=open</text>
+<text x="432" y="376" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">GET   /incidents/{id}</text>
+<text x="432" y="392" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">PATCH /incidents/{id} ack+note</text>
+<line x1="428" y1="402" x2="663" y2="402" stroke="#1e0e40" stroke-width="1"/>
+<text x="432" y="420" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#9060e0">WebSocket /ws/{user_id}</text>
+<text x="432" y="437" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">JWT on connect</text>
+<text x="432" y="453" font-family="'Courier New',monospace" font-size="11" fill="#d0c0ff">Redis SUB push to browser</text>
+<line x1="428" y1="463" x2="663" y2="463" stroke="#1e0e40" stroke-width="1"/>
+<text x="432" y="481" font-family="'Courier New',monospace" font-size="10" fill="#5030a0">asyncpg · Pydantic v2 · redis-py</text>
+<text x="432" y="497" font-family="'Courier New',monospace" font-size="10" fill="#5030a0">user-scoped · UNIQUE(user_id, url)</text>
+<rect x="418" y="528" width="255" height="286" rx="10" fill="#120800" stroke="#c07820" stroke-width="2"/>
+<rect x="418" y="528" width="255" height="28" rx="10" fill="#3a1800"/>
+<text x="545" y="547" text-anchor="middle" font-family="'Courier New',monospace" font-size="13" font-weight="bold" fill="#ffaa33">CELERY BEAT + WORKER</text>
+<text x="545" y="567" text-anchor="middle" font-family="'Courier New',monospace" font-size="10" fill="#7a4010">Redis broker · psycopg2 · Python 3.11</text>
+<text x="432" y="587" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#ffaa33">Beat (every 5 s)</text>
+<text x="432" y="604" font-family="'Courier New',monospace" font-size="11" fill="#ffd0a0">schedule_ping_tasks</text>
+<text x="432" y="620" font-family="'Courier New',monospace" font-size="11" fill="#ffd0a0">fires when interval elapsed</text>
+<line x1="428" y1="630" x2="663" y2="630" stroke="#3a1800" stroke-width="1"/>
+<text x="432" y="648" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#ffaa33">Worker — ping_url(url_id)</text>
+<text x="432" y="665" font-family="'Courier New',monospace" font-size="11" fill="#ffd0a0">runs all check types</text>
+<text x="432" y="681" font-family="'Courier New',monospace" font-size="11" fill="#ffd0a0">UP/DOWN transition url_incidents</text>
+<text x="432" y="697" font-family="'Courier New',monospace" font-size="11" fill="#ffd0a0">PUBLISHes status to Redis</text>
+<line x1="428" y1="707" x2="663" y2="707" stroke="#3a1800" stroke-width="1"/>
+<text x="432" y="725" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#ffaa33">Check Types</text>
+<text x="432" y="742" font-family="'Courier New',monospace" font-size="11" fill="#ffd0a0">HTTP · SSL_EXPIRY · TTFB</text>
+<text x="432" y="758" font-family="'Courier New',monospace" font-size="11" fill="#ffd0a0">KEYWORD · DOWNTIME_DURATION</text>
+<text x="432" y="774" font-family="'Courier New',monospace" font-size="11" fill="#ffd0a0">ERROR_RATE</text>
+<text x="432" y="797" font-family="'Courier New',monospace" font-size="10" fill="#7a4010">psycopg2 writes ping_history</text>
+<rect x="693" y="66" width="210" height="218" rx="10" fill="#011810" stroke="#18a080" stroke-width="2"/>
+<rect x="693" y="66" width="210" height="28" rx="10" fill="#063828"/>
+<text x="798" y="85" text-anchor="middle" font-family="'Courier New',monospace" font-size="13" font-weight="bold" fill="#22ccaa">REDIS :6379</text>
+<text x="798" y="105" text-anchor="middle" font-family="'Courier New',monospace" font-size="10" fill="#0e6848">cache + message broker</text>
+<text x="707" y="125" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#22ccaa">Pub/Sub</text>
+<text x="707" y="142" font-family="'Courier New',monospace" font-size="11" fill="#a0ffe8">channel: uptime:updates</text>
+<text x="707" y="158" font-family="'Courier New',monospace" font-size="11" fill="#a0ffe8">Celery PUBLISH after check</text>
+<text x="707" y="174" font-family="'Courier New',monospace" font-size="11" fill="#a0ffe8">FastAPI WS SUB + forward</text>
+<line x1="703" y1="184" x2="893" y2="184" stroke="#063828" stroke-width="1"/>
+<text x="707" y="202" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#22ccaa">Celery Broker</text>
+<text x="707" y="219" font-family="'Courier New',monospace" font-size="11" fill="#a0ffe8">broker  redis://redis:6379/0</text>
+<text x="707" y="235" font-family="'Courier New',monospace" font-size="11" fill="#a0ffe8">backend redis://redis:6379/1</text>
+<text x="707" y="256" font-family="'Courier New',monospace" font-size="10" fill="#0e6848">volume: redis_data</text>
+<rect x="693" y="302" width="210" height="514" rx="10" fill="#011408" stroke="#18a048" stroke-width="2"/>
+<rect x="693" y="302" width="210" height="28" rx="10" fill="#063820"/>
+<text x="798" y="321" text-anchor="middle" font-family="'Courier New',monospace" font-size="13" font-weight="bold" fill="#22cc70">POSTGRESQL :5432</text>
+<text x="798" y="341" text-anchor="middle" font-family="'Courier New',monospace" font-size="10" fill="#0e6830">db: uptime_monitor</text>
+<text x="707" y="361" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#22cc70">users</text>
+<text x="707" y="378" font-family="'Courier New',monospace" font-size="11" fill="#a0ffc0">id · full_name · email (UNIQUE)</text>
+<text x="707" y="394" font-family="'Courier New',monospace" font-size="11" fill="#a0ffc0">hashed_password · created_at</text>
+<line x1="703" y1="404" x2="893" y2="404" stroke="#063820" stroke-width="1"/>
+<text x="707" y="422" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#22cc70">urls</text>
+<text x="707" y="439" font-family="'Courier New',monospace" font-size="11" fill="#a0ffc0">id · user_id · web_address · name</text>
+<text x="707" y="455" font-family="'Courier New',monospace" font-size="11" fill="#a0ffc0">status · check_type · keyword</text>
+<text x="707" y="471" font-family="'Courier New',monospace" font-size="11" fill="#a0ffc0">check_interval_s · last_pinged_at</text>
+<text x="707" y="487" font-family="'Courier New',monospace" font-size="10" fill="#0e6830">UNIQUE (user_id, web_address)</text>
+<line x1="703" y1="497" x2="893" y2="497" stroke="#063820" stroke-width="1"/>
+<text x="707" y="515" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#22cc70">ping_history</text>
+<text x="707" y="532" font-family="'Courier New',monospace" font-size="11" fill="#a0ffc0">id · url_id · checked_at</text>
+<text x="707" y="548" font-family="'Courier New',monospace" font-size="11" fill="#a0ffc0">response_time_ms · status_code</text>
+<text x="707" y="564" font-family="'Courier New',monospace" font-size="11" fill="#a0ffc0">is_up · check_type · extra_data</text>
+<line x1="703" y1="574" x2="893" y2="574" stroke="#063820" stroke-width="1"/>
+<text x="707" y="592" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#22cc70">url_incidents</text>
+<text x="707" y="609" font-family="'Courier New',monospace" font-size="11" fill="#a0ffc0">id · url_id · started_at</text>
+<text x="707" y="625" font-family="'Courier New',monospace" font-size="11" fill="#a0ffc0">resolved_at · check_type · severity</text>
+<text x="707" y="641" font-family="'Courier New',monospace" font-size="11" fill="#a0ffc0">acknowledged_at · note</text>
+<text x="707" y="657" font-family="'Courier New',monospace" font-size="10" fill="#0e6830">INDEX WHERE resolved IS NULL</text>
+<line x1="703" y1="667" x2="893" y2="667" stroke="#063820" stroke-width="1"/>
+<text x="707" y="685" font-family="'Courier New',monospace" font-size="10" fill="#0e6830">asyncpg (FastAPI)</text>
+<text x="707" y="701" font-family="'Courier New',monospace" font-size="10" fill="#0e6830">psycopg2 (Celery)</text>
+<text x="707" y="717" font-family="'Courier New',monospace" font-size="10" fill="#0e6830">volume: postgres_data</text>
+<rect x="930" y="66" width="188" height="185" rx="10" fill="#0e0e0e" stroke="#505050" stroke-width="1.5" stroke-dasharray="6,4"/>
+<text x="1024" y="88" text-anchor="middle" font-family="'Courier New',monospace" font-size="12" font-weight="bold" fill="#888888">EXTERNAL URLs</text>
+<line x1="940" y1="95" x2="1108" y2="95" stroke="#303030" stroke-width="1"/>
+<text x="940" y="113" font-family="'Courier New',monospace" font-size="11" fill="#aaaaaa">https://github.com</text>
+<text x="940" y="129" font-family="'Courier New',monospace" font-size="11" fill="#aaaaaa">https://google.com</text>
+<text x="940" y="145" font-family="'Courier New',monospace" font-size="11" fill="#aaaaaa">https://cloudflare.com</text>
+<text x="940" y="161" font-family="'Courier New',monospace" font-size="11" fill="#aaaaaa">20+ monitored URLs</text>
+<line x1="940" y1="171" x2="1108" y2="171" stroke="#303030" stroke-width="1"/>
+<text x="940" y="188" font-family="'Courier New',monospace" font-size="10" fill="#666666">HTTP/HTTPS · 10s timeout</text>
+<text x="940" y="204" font-family="'Courier New',monospace" font-size="10" fill="#666666">DNS + TLS + SSL cert check</text>
+<text x="940" y="228" font-family="'Courier New',monospace" font-size="9" fill="#404040">internet - outside docker</text>
+<rect x="930" y="270" width="188" height="250" rx="8" fill="#0a0a14" stroke="#1a1a30" stroke-width="1"/>
+<text x="942" y="289" font-family="'Courier New',monospace" font-size="11" font-weight="bold" fill="#6060a0">LEGEND</text>
+<line x1="940" y1="295" x2="1108" y2="295" stroke="#1a1a30" stroke-width="1"/>
+<line x1="942" y1="314" x2="978" y2="314" stroke="#4488ff" stroke-width="2" marker-end="url(#ab)"/>
+<text x="984" y="318" font-family="'Courier New',monospace" font-size="10" fill="#8090c0">REST / HTTP</text>
+<line x1="942" y1="336" x2="978" y2="336" stroke="#22cc88" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#ag)"/>
+<text x="984" y="340" font-family="'Courier New',monospace" font-size="10" fill="#8090c0">WebSocket</text>
+<line x1="942" y1="358" x2="978" y2="358" stroke="#22ccaa" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#at)"/>
+<text x="984" y="362" font-family="'Courier New',monospace" font-size="10" fill="#8090c0">pub/sub</text>
+<line x1="942" y1="380" x2="978" y2="380" stroke="#9966ff" stroke-width="2" marker-end="url(#ap)"/>
+<text x="984" y="384" font-family="'Courier New',monospace" font-size="10" fill="#8090c0">asyncpg</text>
+<line x1="942" y1="402" x2="978" y2="402" stroke="#ffaa33" stroke-width="2" marker-end="url(#ao)"/>
+<text x="984" y="406" font-family="'Courier New',monospace" font-size="10" fill="#8090c0">psycopg2</text>
+<line x1="942" y1="424" x2="978" y2="424" stroke="#888888" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#agr)"/>
+<text x="984" y="428" font-family="'Courier New',monospace" font-size="10" fill="#8090c0">HTTP probe</text>
+<text x="942" y="452" font-family="'Courier New',monospace" font-size="9" fill="#38386a">Celery PUB Redis SUB WS Browser</text>
+<text x="942" y="496" font-family="'Courier New',monospace" font-size="9" fill="#28285a">GitHub: yathboss/URL-MONITORING</text>
+<text x="942" y="510" font-family="'Courier New',monospace" font-size="9" fill="#28285a">main / feat/3d-cinematic-ui</text>
+<line x1="160" y1="398" x2="178" y2="398" stroke="#4488ff" stroke-width="2" marker-end="url(#ab)"/>
+<text x="144" y="393" text-anchor="middle" font-family="'Courier New',monospace" font-size="9" fill="#4488ff">HTTP</text>
+<line x1="398" y1="310" x2="418" y2="310" stroke="#4488ff" stroke-width="2" marker-end="url(#ab)"/>
+<text x="408" y="305" text-anchor="middle" font-family="'Courier New',monospace" font-size="9" fill="#4488ff">REST</text>
+<line x1="418" y1="355" x2="398" y2="355" stroke="#22cc88" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#ag)"/>
+<line x1="398" y1="370" x2="418" y2="370" stroke="#22cc88" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#ag)"/>
+<text x="408" y="350" text-anchor="middle" font-family="'Courier New',monospace" font-size="9" fill="#22cc88">WS</text>
+<line x1="673" y1="155" x2="693" y2="155" stroke="#22ccaa" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#at)"/>
+<text x="683" y="149" text-anchor="middle" font-family="'Courier New',monospace" font-size="9" fill="#22ccaa">PUB</text>
+<line x1="693" y1="185" x2="673" y2="185" stroke="#22ccaa" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#at)"/>
+<text x="683" y="200" text-anchor="middle" font-family="'Courier New',monospace" font-size="9" fill="#22ccaa">SUB</text>
+<line x1="673" y1="400" x2="693" y2="400" stroke="#9966ff" stroke-width="2" marker-end="url(#ap)"/>
+<text x="683" y="394" text-anchor="middle" font-family="'Courier New',monospace" font-size="9" fill="#9966ff">asyncpg</text>
+<line x1="673" y1="700" x2="693" y2="700" stroke="#ffaa33" stroke-width="2" marker-end="url(#ao)"/>
+<text x="683" y="694" text-anchor="middle" font-family="'Courier New',monospace" font-size="9" fill="#ffaa33">psycopg2</text>
+<polyline points="673,620 910,620 910,195 903,195" fill="none" stroke="#22ccaa" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#at)"/>
+<text x="916" y="410" font-family="'Courier New',monospace" font-size="9" fill="#22ccaa" transform="rotate(-90,916,410)">PUBLISH uptime:updates</text>
+<polyline points="545,528 545,310 930,158" fill="none" stroke="#888888" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#agr)"/>
+<text x="810" y="308" font-family="'Courier New',monospace" font-size="9" fill="#666666">HTTP probe</text>
+</svg>
