@@ -17,4 +17,5 @@ run-logs/
 vite.config.js
 vite.config.d.ts
 dump.rdb
+.mcp.json
 

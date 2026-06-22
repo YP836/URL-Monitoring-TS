@@ -7,6 +7,12 @@ import { AddUrlModal } from '../components/urls/AddUrlModal';
 import { Toast } from '../components/ui/Toast';
 import { Badge } from '../components/ui/Badge';
 import { PageLayout } from '../components/layout/PageLayout';
+import {
+  CardGridSkeleton,
+  MonitorsSkeleton,
+  SinglePanelSkeleton,
+  SplitPanelSkeleton,
+} from '../components/ui/Skeleton';
 import { getUrlExtraData } from '../api/client';
 import { useUrls } from '../hooks/useUrls';
 import { buildWsUrl, useWebSocket } from '../hooks/useWebSocket';
@@ -775,7 +781,20 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
     </section>
   );
 
+  const renderSkeletonView = () => {
+    if (view === 'home') return null;
+    if (view === 'monitors') return <MonitorsSkeleton />;
+    if (view === 'incidents') return <SplitPanelSkeleton />;
+    if (view === 'status-pages') return <CardGridSkeleton count={4} />;
+    if (view === 'maintenance') return <SinglePanelSkeleton rows={3} />;
+    if (view === 'alerts') return <CardGridSkeleton count={4} />;
+    if (view === 'reports') return <SinglePanelSkeleton rows={4} />;
+    if (view === 'integrations') return <CardGridSkeleton count={6} />;
+    return <SplitPanelSkeleton />;
+  };
+
   const renderView = () => {
+    if (isLoading && view !== 'home') return renderSkeletonView();
     if (view === 'home') return renderHome();
     if (view === 'monitors') return renderMonitors();
     if (view === 'incidents') return renderIncidents();
