@@ -15,7 +15,7 @@ interface UrlCardProps {
   lastPing?: PingResult | null;
 }
 
-function splitCheckTypes(checkType: string | undefined): CheckType[] {
+function splitCheckTypes(checkType: string | null | undefined): CheckType[] {
   const knownChecks: CheckType[] = ['HTTP', 'SSL_EXPIRY', 'TTFB', 'KEYWORD', 'DOWNTIME_DURATION', 'ERROR_RATE'];
   const checks = (checkType ?? 'HTTP')
     .split(',')

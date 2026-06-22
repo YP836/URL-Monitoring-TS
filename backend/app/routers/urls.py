@@ -52,6 +52,34 @@ def _enqueue_selected_checks(url_id: int, web_address: str, check_type: str, key
             continue
 
 
+async def _fetch_visible_url(conn: Any, url_id: int, current_user: UserRead) -> Any:
+    if current_user.role == "admin":
+        return await conn.fetchrow(
+            """
+            SELECT
+                urls.id, urls.web_address, urls.name, urls.status, urls.created_at, urls.check_type,
+                urls.keyword_to_find, urls.check_interval_seconds, urls.ping_interval_seconds,
+                users.email as owner_email
+            FROM urls
+            LEFT JOIN users ON urls.user_id = users.id
+            WHERE urls.id = $1
+            """,
+            url_id,
+        )
+
+    return await conn.fetchrow(
+        """
+        SELECT
+            id, web_address, name, status, created_at, check_type, keyword_to_find,
+            check_interval_seconds, ping_interval_seconds
+        FROM urls
+        WHERE id = $1 AND user_id = $2
+        """,
+        url_id,
+        current_user.id,
+    )
+
+
 @router.get("/urls", response_model=list[URLRead])
 async def list_urls(current_user: Annotated[UserRead, Depends(get_current_user)]) -> list[URLRead]:
     """Retrieve all monitored URLs."""
@@ -163,17 +191,7 @@ async def get_url_detail(url_id: int, current_user: Annotated[UserRead, Depends(
     """Retrieve details for a specific URL including recent pings."""
     try:
         async with get_connection() as conn:
-            row = await conn.fetchrow(
-                """
-                SELECT
-                    id, web_address, name, status, created_at, check_type, keyword_to_find,
-                    check_interval_seconds, ping_interval_seconds
-                FROM urls
-                WHERE id = $1 AND user_id = $2
-                """,
-                url_id,
-                current_user.id,
-            )
+            row = await _fetch_visible_url(conn, url_id, current_user)
             if not row:
                 raise HTTPException(status_code=404, detail="URL not found")
 
@@ -183,7 +201,7 @@ async def get_url_detail(url_id: int, current_user: Annotated[UserRead, Depends(
                 FROM ping_history
                 WHERE url_id = $1
                 ORDER BY checked_at DESC
-                LIMIT 2000
+                LIMIT 3000
                 """,
                 url_id,
             )
@@ -215,7 +233,7 @@ async def get_url_extra_data(url_id: int, current_user: Annotated[UserRead, Depe
     """Retrieve the most recent extra_data payload for each selected URL check."""
     try:
         async with get_connection() as conn:
-            url_row = await conn.fetchrow("SELECT check_type FROM urls WHERE id = $1 AND user_id = $2", url_id, current_user.id)
+            url_row = await _fetch_visible_url(conn, url_id, current_user)
             if not url_row:
                 raise HTTPException(status_code=404, detail="URL not found")
 
@@ -258,15 +276,7 @@ async def get_url_extra_data(url_id: int, current_user: Annotated[UserRead, Depe
 async def check_url_now(url_id: int, current_user: Annotated[UserRead, Depends(get_current_user)]) -> dict[str, Any]:
     """Run the selected checks for a URL immediately."""
     async with get_connection() as conn:
-        row = await conn.fetchrow(
-            """
-            SELECT id, web_address, check_type, keyword_to_find
-            FROM urls
-            WHERE id = $1 AND user_id = $2
-            """,
-            url_id,
-            current_user.id,
-        )
+        row = await _fetch_visible_url(conn, url_id, current_user)
         if not row:
             raise HTTPException(status_code=404, detail="URL not found")
 

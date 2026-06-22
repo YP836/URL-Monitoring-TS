@@ -27,7 +27,7 @@ const sectionOptions: Array<{ key: ReportSection; label: string }> = [
   { key: 'checks', label: 'Recent checks' },
 ];
 
-function splitCheckTypes(checkType: string | undefined): CheckType[] {
+function splitCheckTypes(checkType: string | null | undefined): CheckType[] {
   const knownChecks: CheckType[] = ['HTTP', 'SSL_EXPIRY', 'TTFB', 'KEYWORD', 'DOWNTIME_DURATION', 'ERROR_RATE'];
   const checks = (checkType ?? 'HTTP')
     .split(',')
@@ -150,7 +150,7 @@ function getNextPdfSliceHeight(
   return Math.max(120, (safeBreak ?? target) - sourceY);
 }
 
-function getSignalRows(checkType: string | undefined, extraData: Record<string, unknown> | null) {
+function getSignalRows(checkType: string | null | undefined, extraData: Record<string, unknown> | null) {
   return splitCheckTypes(checkType)
     .filter((check) => check !== 'HTTP')
     .map((check) => {

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { createPortal } from 'react-dom';
 import modalStyles from '../components/urls/UrlCard.module.css';
 import { AddUrlModal } from '../components/urls/AddUrlModal';
@@ -179,7 +178,7 @@ function toLiveFleetMonitor(url: URLItem, lastPingMap: Record<number, { latency_
   };
 }
 
-function getCheckChips(checkType?: string): string[] {
+function getCheckChips(checkType?: string | null): string[] {
   return (checkType ?? 'HTTP')
     .split(',')
     .map((check) => check.trim())
@@ -570,7 +569,6 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
   const { urls, isLoading, error, addUrl, deleteUrl, retryFetch, clearError } = useUrls();
   const { incidents, acknowledgeIncident } = useIncidents('open');
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
   const [extraDataMap, setExtraDataMap] = useState<Record<number, Record<string, unknown>>>({});
   const [uptimeWindow, setUptimeWindow] = useState('90d');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);

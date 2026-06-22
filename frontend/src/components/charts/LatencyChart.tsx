@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, ReferenceDot } from 'recharts';
 import { PingHistoryRead } from '../../types';
+import { parseApiDate } from '../../utils/dates';
 
 interface LatencyChartProps {
   pings: PingHistoryRead[];
@@ -30,9 +31,8 @@ export function LatencyChart({ pings, height = 180 }: LatencyChartProps) {
     );
   }
 
-  // Take last 50 and reverse to chronological order (oldest left, newest right)
-  const data = [...httpPings].slice(0, 50).reverse().map(ping => {
-    const d = new Date(ping.checked_at);
+  const data = [...httpPings].reverse().map(ping => {
+    const d = parseApiDate(ping.checked_at);
     return {
       timeLabel: `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`,
       latency: ping.response_time_ms, // null if timeout

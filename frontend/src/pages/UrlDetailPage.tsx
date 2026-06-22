@@ -12,16 +12,15 @@ import { Toast } from '../components/ui/Toast';
 import { StatusDot } from '../components/ui/StatusDot';
 import { ChartSkeleton, Skeleton, StatCardSkeleton } from '../components/ui/Skeleton';
 import { MetricKey } from '../components/stats/MetricChooser';
-import { useAuth } from '../contexts/AuthContext';
 import { StatsRow } from '../components/stats/StatsRow';
 import { UptimeBar } from '../components/charts/UptimeBar';
 import { LatencyChart } from '../components/charts/LatencyChart';
 import { Favicon } from './Dashboard';
 import { MonitorReportModal } from '../components/reports/MonitorReportModal';
 import { buildWsUrl, useWebSocket } from '../hooks/useWebSocket';
-import { timeAgo } from '../utils/dates';
+import { parseApiDate, timeAgo } from '../utils/dates';
 
-function splitCheckTypes(checkType: string | undefined): CheckType[] {
+function splitCheckTypes(checkType: string | null | undefined): CheckType[] {
   const knownChecks: CheckType[] = ['HTTP', 'SSL_EXPIRY', 'TTFB', 'KEYWORD', 'DOWNTIME_DURATION', 'ERROR_RATE'];
   const checks = (checkType ?? 'HTTP')
     .split(',')
@@ -30,7 +29,7 @@ function splitCheckTypes(checkType: string | undefined): CheckType[] {
   return checks.length > 0 ? checks : ['HTTP'];
 }
 
-function metricsForCheckType(checkType: string | undefined): MetricKey[] {
+function metricsForCheckType(checkType: string | null | undefined): MetricKey[] {
   const selectedChecks = splitCheckTypes(checkType);
   const metrics: MetricKey[] = [];
 
@@ -70,10 +69,25 @@ function formatCheckType(checkType?: CheckType | null): string {
   return checkType ? checkLabels[checkType] : 'HTTP availability';
 }
 
+const latencyWindowOptions = [
+  { value: '1h', label: '1 hour', hours: 1 },
+  { value: '3h', label: '3 hours', hours: 3 },
+  { value: '6h', label: '6 hours', hours: 6 },
+  { value: '12h', label: '12 hours', hours: 12 },
+  { value: '24h', label: '24 hours', hours: 24 },
+] as const;
+
+type LatencyWindow = (typeof latencyWindowOptions)[number]['value'];
+
+function filterPingsByLatencyWindow(pings: PingHistoryRead[], latencyWindow: LatencyWindow): PingHistoryRead[] {
+  const option = latencyWindowOptions.find((item) => item.value === latencyWindow) ?? latencyWindowOptions[0];
+  const cutoff = Date.now() - option.hours * 60 * 60 * 1000;
+  return pings.filter((ping) => parseApiDate(ping.checked_at).getTime() >= cutoff);
+}
+
 export function UrlDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
   const urlId = Number(id);
   const hasValidUrlId = Number.isInteger(urlId) && urlId > 0;
   const [url, setUrl] = useState<URLDetail | null>(null);
@@ -86,6 +100,7 @@ export function UrlDetailPage() {
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [uptimeWindow, setUptimeWindow] = useState('30d');
+  const [latencyWindow, setLatencyWindow] = useState<LatencyWindow>('1h');
   const shouldReduceMotion = useReducedMotion();
   const { lastMessage, isConnected, connectionError } = useWebSocket(buildWsUrl(import.meta.env.VITE_API_BASE_URL));
 
@@ -141,7 +156,7 @@ export function UrlDetailPage() {
       status_code: lastMessage.status_code ?? null,
       is_up: lastMessage.status === 'UP',
     };
-    setLivePings(previous => [nextPing, ...previous].slice(0, 2000));
+    setLivePings(previous => [nextPing, ...previous].slice(0, 3000));
     if (lastMessage.extra_data && lastMessage.check_type) {
       setExtraData((previous) => ({
         ...(previous ?? {}),
@@ -158,6 +173,9 @@ export function UrlDetailPage() {
   const selectedChecks = splitCheckTypes(url?.check_type);
   const showLatencyChart = selectedChecks.includes('HTTP');
   const showUptimeChart = selectedChecks.includes('HTTP');
+  const latencyChartPings = filterPingsByLatencyWindow(livePings, latencyWindow);
+  const selectedLatencyWindowLabel =
+    latencyWindowOptions.find((option) => option.value === latencyWindow)?.label ?? '1 hour';
   const status = statusMeta[currentStatus] ?? statusMeta.PENDING;
   const latestCheckedAt = lastMessage?.url_id === urlId
     ? lastMessage.checked_at
@@ -303,10 +321,22 @@ export function UrlDetailPage() {
           {showLatencyChart && (
             <Section
               eyebrow="Performance trend"
-              title="Response time"
-              description="Latest 50 records. Failed checks are marked on the time series."
+              title={`Response time - last ${selectedLatencyWindowLabel}`}
+              description="Failed checks are marked on the time series. Times are shown in your local clock."
+              action={
+                <select
+                  aria-label="Latency chart window"
+                  value={latencyWindow}
+                  onChange={(e) => setLatencyWindow(e.target.value as LatencyWindow)}
+                  className="monitor-window-select"
+                >
+                  {latencyWindowOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              }
             >
-              <LatencyChart pings={livePings} />
+              <LatencyChart pings={latencyChartPings} />
             </Section>
           )}
           </div>

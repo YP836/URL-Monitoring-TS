@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PageLayout } from '../components/layout/PageLayout';
-import { getUsers, deleteUser, updateUser } from '../api/client';
-import { AdminUserOverview, UserUpdate } from '../types';
+import { getApiErrorMessage, getUsers, deleteUser, updateUser } from '../api/client';
+import { AdminUserOverview } from '../types';
 import { Badge } from '../components/ui/Badge';
 import { Toast } from '../components/ui/Toast';
 
@@ -17,8 +17,8 @@ export function TeamPage() {
       const data = await getUsers();
       setUsers(data);
       setError(null);
-    } catch (e: any) {
-      setError(e.response?.data?.detail || e.message || 'Failed to load users');
+    } catch (e) {
+      setError(getApiErrorMessage(e, 'Failed to load users'));
     } finally {
       setIsLoading(false);
     }
@@ -36,8 +36,8 @@ export function TeamPage() {
       await deleteUser(id);
       setToast('User successfully deleted');
       void fetchUsers();
-    } catch (e: any) {
-      alert(e.response?.data?.detail || e.message || 'Failed to delete user');
+    } catch (e) {
+      alert(getApiErrorMessage(e, 'Failed to delete user'));
     }
   };
 
@@ -50,14 +50,14 @@ export function TeamPage() {
       await updateUser(id, { role: newRole });
       setToast(`User promoted to ${newRole}`);
       void fetchUsers();
-    } catch (e: any) {
-      alert(e.response?.data?.detail || e.message || 'Failed to update user');
+    } catch (e) {
+      alert(getApiErrorMessage(e, 'Failed to update user'));
     }
   };
 
   return (
-    <PageLayout title="Team Management" subtitle="Manage viewers, admins, and oversee workspace access.">
-      {toast && <Toast message={toast} onClose={() => setToast(null)} type="success" />}
+    <PageLayout isConnected={true} connectionError={null}>
+      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
       
       <div className="ops-panel" style={{ marginTop: '24px' }}>
         <div className="ops-panel-header">
