@@ -13,6 +13,7 @@ export interface URLItem {
   check_interval_seconds: number;
   ping_interval_seconds: number;
   owner_email?: string | null;
+  is_public: boolean;
 }
 
 export interface AdminUserOverview extends UserRead {
@@ -93,4 +94,27 @@ export interface Incident {
   acknowledged_at: string | null;
   note: string | null;
   duration_minutes: number | null;
+}
+
+export interface MaintenanceWindow {
+  id: number;
+  url_id: number;
+  title: string;
+  message?: string | null;
+  starts_at: string;
+  ends_at: string;
+}
+
+export interface PublicMonitor {
+  id: number;
+  name: string;
+  status: URLStatus;
+  uptime_90d: number;
+  last_checked_at: string | null;
+  open_incident: Incident | null;
+}
+
+export interface PublicStatus {
+  monitors: PublicMonitor[];
+  maintenance_windows: MaintenanceWindow[];
 }

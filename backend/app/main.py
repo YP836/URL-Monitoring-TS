@@ -13,6 +13,8 @@ from .routers.ws import router as ws_router
 from .routers import auth as auth_router
 from .routers import users as users_router
 from .routers import incidents as incidents_router
+from .routers import public as public_router
+from .routers import maintenance as maintenance_router
 from app.redis_listener import redis_listener
 from app.websocket_manager import manager
 
@@ -41,6 +43,9 @@ def api_key_dependency(connection: HTTPConnection) -> None:
 
     exempt_paths = {"/healthz", "/docs", "/openapi.json", "/redoc"}
     if connection.scope["method"] == "GET" and connection.url.path in exempt_paths:
+        return
+        
+    if connection.scope["method"] == "GET" and connection.url.path.startswith("/api/v1/public"):
         return
 
     if connection.scope["method"] == "OPTIONS":
@@ -71,4 +76,6 @@ app.include_router(auth_router.router)
 app.include_router(urls_router.router, prefix="/api/v1")
 app.include_router(users_router.router, prefix="/api/v1")
 app.include_router(incidents_router.router, prefix="/api/v1")
+app.include_router(maintenance_router.router, prefix="/api/v1")
+app.include_router(public_router.router, prefix="/api/v1/public")
 app.include_router(ws_router)

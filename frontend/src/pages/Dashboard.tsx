@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import modalStyles from '../components/urls/UrlCard.module.css';
 import { AddUrlModal } from '../components/urls/AddUrlModal';
+import { MaintenanceModal } from '../components/maintenance/MaintenanceModal';
 import { Toast } from '../components/ui/Toast';
 import { Badge } from '../components/ui/Badge';
 import { PageLayout } from '../components/layout/PageLayout';
@@ -13,13 +14,13 @@ import {
   SinglePanelSkeleton,
   SplitPanelSkeleton,
 } from '../components/ui/Skeleton';
-import { getUrlExtraData } from '../api/client';
+import { getUrlExtraData, getMaintenanceWindows, updateUrl, deleteMaintenanceWindow } from '../api/client';
 import { useUrls } from '../hooks/useUrls';
 import { useIncidents } from '../hooks/useIncidents';
 import { buildWsUrl, useWebSocket } from '../hooks/useWebSocket';
 import { useLiveStatus } from '../hooks/useLiveStatus';
-import { Incident, URLItem, URLStatus } from '../types';
-import { timeAgo } from '../utils/dates';
+import { Incident, URLItem, URLStatus, MaintenanceWindow } from '../types';
+import { timeAgo, parseApiDate } from '../utils/dates';
 
 export type OperationsView =
   | 'home'
@@ -572,7 +573,10 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
   const [extraDataMap, setExtraDataMap] = useState<Record<number, Record<string, unknown>>>({});
   const [uptimeWindow, setUptimeWindow] = useState('90d');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
+  const [maintenanceList, setMaintenanceList] = useState<MaintenanceWindow[]>([]);
   const [monitorToDelete, setMonitorToDelete] = useState<FleetMonitor | null>(null);
+  const [maintenanceToDelete, setMaintenanceToDelete] = useState<MaintenanceWindow | null>(null);
   const wsUrl = buildWsUrl(import.meta.env.VITE_API_BASE_URL);
   const { lastMessage, isConnected, connectionError } = useWebSocket(wsUrl);
   const { liveUrls, lastPingMap } = useLiveStatus(urls, lastMessage);
@@ -583,6 +587,12 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
   useEffect(() => {
     document.title = `${copy.title} - Uptime Monitor`;
   }, [copy.title]);
+
+  useEffect(() => {
+    if (view === 'maintenance') {
+      getMaintenanceWindows().then(setMaintenanceList).catch(console.error);
+    }
+  }, [view]);
 
   useEffect(() => {
     if (urls.length === 0) {
@@ -720,26 +730,98 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
   );
 
   const renderStatusPages = () => (
-    <section className="ops-card-grid">
-      <OperationalCard icon="ti-world-share" title="Public status page" value="Live draft" detail="Customer-facing uptime, incidents, and maintenance announcements." />
-      <OperationalCard icon="ti-lock" title="Internal status page" value="Private" detail="Engineering-only page with owners, regions, and raw signal health." />
-      <OperationalCard icon="ti-users" title="Subscribers" value="128" detail="Email subscribers can receive issue and maintenance updates." />
-      <OperationalCard icon="ti-components" title="Components" value="8 services" detail="Group monitors into API, web, database, payments, and edge." />
-    </section>
-  );
-
-  const renderMaintenance = () => (
     <div className="ops-panel">
       <div className="ops-panel-header">
         <div>
-          <p className="ops-kicker">Schedule</p>
-          <h3>Planned maintenance windows</h3>
+          <p className="ops-kicker">Public Status Page</p>
+          <h3>Manage public monitors</h3>
         </div>
-        <button type="button" className="ops-ghost-button"><i className="ti ti-calendar-plus" /> New window</button>
+        <a href="/status" target="_blank" rel="noreferrer" className="primary" style={{ textDecoration: 'none', padding: '8px 16px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <i className="ti ti-external-link" /> View Live Page
+        </a>
       </div>
-      <SimpleRows rows={maintenanceWindows} />
+      <div className="ops-simple-rows">
+        {fleetMonitors.map((monitor) => (
+          <article key={monitor.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid #f3f4f6' }}>
+            <div>
+              <strong style={{ display: 'block', fontSize: '0.95rem', color: '#111827', marginBottom: 4 }}>{monitor.name}</strong>
+              <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>{monitor.web_address}</span>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 500, color: monitor.is_public ? '#1D9E75' : '#6B7280' }}>
+                {monitor.is_public ? 'Public' : 'Hidden'}
+              </span>
+              <div style={{ position: 'relative', width: 36, height: 20, backgroundColor: monitor.is_public ? '#1D9E75' : '#E5E7EB', borderRadius: 20, transition: 'background-color 0.2s', display: 'flex', alignItems: 'center', padding: 2 }}>
+                <div style={{ width: 16, height: 16, backgroundColor: '#fff', borderRadius: '50%', transform: `translateX(${monitor.is_public ? 16 : 0}px)`, transition: 'transform 0.2s' }} />
+              </div>
+              <input 
+                type="checkbox" 
+                style={{ display: 'none' }} 
+                checked={monitor.is_public} 
+                onChange={async () => {
+                  try {
+                    await updateUrl(monitor.id, { is_public: !monitor.is_public });
+                    retryFetch();
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }} 
+              />
+            </label>
+          </article>
+        ))}
+      </div>
     </div>
   );
+
+  const renderMaintenance = () => {
+    return (
+      <div className="ops-panel">
+        <div className="ops-panel-header">
+          <div>
+            <p className="ops-kicker">Schedule</p>
+            <h3>Planned maintenance windows</h3>
+          </div>
+          <button type="button" className="ops-ghost-button" onClick={() => setIsMaintenanceModalOpen(true)}>
+            <i className="ti ti-calendar-plus" /> New window
+          </button>
+        </div>
+        {maintenanceList.length > 0 ? (
+          <div className="ops-simple-rows">
+            {maintenanceList.map(w => {
+              const start = new Date(parseApiDate(w.starts_at)).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+              const end = new Date(parseApiDate(w.ends_at)).toLocaleString([], { hour: '2-digit', minute: '2-digit' });
+              return (
+                <article key={w.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid #f3f4f6' }}>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.95rem', color: '#111827', marginBottom: 4 }}>{w.title}</strong>
+                    <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>{w.message || 'No description provided'}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <Badge variant="neutral" label={`${start} - ${end}`} />
+                    <button 
+                      type="button" 
+                      onClick={() => setMaintenanceToDelete(w)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}
+                      onMouseEnter={e => e.currentTarget.style.color = '#E24B4A'}
+                      onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}
+                      title="Delete window"
+                    >
+                      <i className="ti ti-trash" style={{ fontSize: '1.1rem' }} />
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ padding: '32px 24px', textAlign: 'center', color: '#667085', fontSize: '0.95rem' }}>
+            No maintenance windows scheduled.
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderAlerts = () => (
     <section className="ops-card-grid">
@@ -871,12 +953,6 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
                 isLoading={isLoading}
               />
             )}
-          </AnimatePresence>,
-          document.body
-        )}
-
-        {createPortal(
-          <AnimatePresence>
             {monitorToDelete && (
               <motion.div
                 className={modalStyles.modalOverlay}
@@ -909,6 +985,54 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
                   </div>
                 </motion.div>
               </motion.div>
+            )}
+            {maintenanceToDelete && (
+              <motion.div
+                className={modalStyles.modalOverlay}
+                onClick={() => setMaintenanceToDelete(null)}
+                role="presentation"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+              >
+                <motion.div
+                  className={modalStyles.confirmDialog}
+                  role="dialog"
+                  aria-modal="true"
+                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                  initial={{ opacity: 0, y: 18, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 12, scale: 0.96 }}
+                  transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <motion.div className={modalStyles.confirmIcon} initial={{ scale: 0.6, rotate: -18 }} animate={{ scale: 1, rotate: 0 }}>!</motion.div>
+                  <h2 style={{ margin: 0, color: '#111827', fontSize: '1.35rem' }}>Delete maintenance?</h2>
+                  <p style={{ margin: '10px 0 0', color: '#4B5563', lineHeight: 1.55 }}>This will permanently remove <strong>{maintenanceToDelete.title}</strong> from the schedule.</p>
+                  <div className={modalStyles.dialogActions}>
+                    <motion.button className={modalStyles.cancelBtn} type="button" onClick={() => setMaintenanceToDelete(null)}>Cancel</motion.button>
+                    <motion.button className={modalStyles.confirmDeleteBtn} type="button" onClick={async () => {
+                      try {
+                        await deleteMaintenanceWindow(maintenanceToDelete.id);
+                        const updated = await getMaintenanceWindows();
+                        setMaintenanceList(updated);
+                      } catch (e) {
+                        console.error(e);
+                      }
+                      setMaintenanceToDelete(null);
+                    }}>Delete</motion.button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+            {isMaintenanceModalOpen && (
+              <MaintenanceModal 
+                urls={liveUrls}
+                onClose={() => setIsMaintenanceModalOpen(false)}
+                onSuccess={() => {
+                  getMaintenanceWindows().then(setMaintenanceList).catch(console.error);
+                }}
+              />
             )}
           </AnimatePresence>,
           document.body

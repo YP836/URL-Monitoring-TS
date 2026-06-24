@@ -91,6 +91,16 @@ export function Sidebar({ urlCount }: SidebarProps) {
 
       <div className="sidebar-footer" style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
         <a
+          href="/status"
+          target="_blank"
+          rel="noreferrer"
+          className="sidebar-doc-link"
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4B5563', fontSize: '13px', textDecoration: 'none', marginBottom: '16px' }}
+        >
+          <i className="ti ti-world-share" aria-hidden="true" />
+          View Public Status
+        </a>
+        <a
           href={`${import.meta.env.VITE_API_BASE_URL}/docs`}
           target="_blank"
           rel="noreferrer"

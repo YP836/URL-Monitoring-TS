@@ -63,12 +63,14 @@ class URLRead(BaseModel):
     check_interval_seconds: int = 30
     ping_interval_seconds: int = 30
     owner_email: str | None = None
+    is_public: bool = False
 
 
 class URLUpdate(BaseModel):
     web_address: HttpUrl | None = None
     name: str | None = Field(None, min_length=1, max_length=100)
     ping_interval_seconds: int | None = None
+    is_public: bool | None = None
 
 
 class AdminUserOverview(UserRead):
@@ -119,3 +121,38 @@ class IncidentRead(BaseModel):
 class IncidentUpdate(BaseModel):
     acknowledged_at: datetime | None = None
     note: str | None = None
+
+
+class MaintenanceWindowCreate(BaseModel):
+    url_id: int
+    title: str
+    message: str | None = None
+    starts_at: datetime
+    ends_at: datetime
+
+
+class MaintenanceWindowCreateList(BaseModel):
+    url_ids: list[int]
+    title: str
+    message: str | None = None
+    starts_at: datetime
+    ends_at: datetime
+
+
+class MaintenanceWindowRead(MaintenanceWindowCreate):
+    id: int
+
+
+class PublicMonitorRead(BaseModel):
+    id: int
+    name: str
+    status: str
+    uptime_90d: float
+    last_checked_at: datetime | None
+    open_incident: IncidentRead | None = None
+
+
+class PublicStatusRead(BaseModel):
+    monitors: list[PublicMonitorRead]
+    maintenance_windows: list[MaintenanceWindowRead]
+

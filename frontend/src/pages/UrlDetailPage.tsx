@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Download, ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
+import { Download, ExternalLink, RefreshCw, Trash2, Calendar } from 'lucide-react';
 import { checkUrlNow, getApiErrorMessage, getUrlDetail, getUrlExtraData } from '../api/client';
 import modalStyles from '../components/urls/UrlCard.module.css';
 import { CheckType, PingHistoryRead, URLDetail } from '../types';
@@ -17,6 +17,7 @@ import { UptimeBar } from '../components/charts/UptimeBar';
 import { LatencyChart } from '../components/charts/LatencyChart';
 import { Favicon } from './Dashboard';
 import { MonitorReportModal } from '../components/reports/MonitorReportModal';
+import { MaintenanceModal } from '../components/maintenance/MaintenanceModal';
 import { buildWsUrl, useWebSocket } from '../hooks/useWebSocket';
 import { parseApiDate, timeAgo } from '../utils/dates';
 
@@ -98,6 +99,7 @@ export function UrlDetailPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [extraData, setExtraData] = useState<Record<string, unknown> | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [uptimeWindow, setUptimeWindow] = useState('30d');
   const [latencyWindow, setLatencyWindow] = useState<LatencyWindow>('1h');
@@ -251,6 +253,27 @@ export function UrlDetailPage() {
               </div>
             </div>
             <div className="detail-actions">
+              <label className="public-toggle-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', color: '#4b5563', marginRight: 'auto' }}>
+                <input 
+                  type="checkbox" 
+                  checked={url.is_public || false}
+                  onChange={async (e) => {
+                    const newValue = e.target.checked;
+                    try {
+                      await import('../api/client').then(m => m.updateUrl(urlId, { is_public: newValue }));
+                      setUrl({ ...url, is_public: newValue });
+                      setToast(newValue ? 'Monitor is now public' : 'Monitor is now private');
+                    } catch (e) {
+                      setToast('Failed to update public status');
+                    }
+                  }}
+                />
+                Public Status Page
+              </label>
+              <button className="outline-button action-button" type="button" onClick={() => setIsMaintenanceModalOpen(true)}>
+                <Calendar size={15} aria-hidden="true" />
+                Schedule
+              </button>
               <button className="outline-button action-button" type="button" onClick={handleCheckNow} disabled={isChecking} aria-busy={isChecking}>
                 <RefreshCw className={isChecking ? 'spin-icon' : undefined} size={15} aria-hidden="true" />
                 {isChecking ? 'Checking' : 'Run check'}
@@ -351,6 +374,13 @@ export function UrlDetailPage() {
                 showUptimeChart={showUptimeChart}
                 showLatencyChart={showLatencyChart}
                 onClose={() => setIsReportOpen(false)}
+              />
+            )}
+            {isMaintenanceModalOpen && (
+              <MaintenanceModal
+                urlId={urlId}
+                urlName={url.name}
+                onClose={() => setIsMaintenanceModalOpen(false)}
               />
             )}
           </AnimatePresence>
