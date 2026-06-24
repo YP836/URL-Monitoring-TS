@@ -164,7 +164,8 @@ def init_db():
                 keyword_to_find VARCHAR(255),
                 check_interval_seconds INTEGER NOT NULL DEFAULT 30,
                 ping_interval_seconds INTEGER NOT NULL DEFAULT 30,
-                last_pinged_at TIMESTAMPTZ
+                last_pinged_at TIMESTAMPTZ,
+                is_public BOOLEAN DEFAULT false
             )
         """)
         
@@ -177,6 +178,18 @@ def init_db():
                 response_time_ms INTEGER,
                 status_code INTEGER,
                 is_up BOOLEAN NOT NULL
+            )
+        """)
+        
+        print("Creating 'maintenance_windows' table...")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS maintenance_windows (
+                id SERIAL PRIMARY KEY,
+                url_id INTEGER REFERENCES urls(id) ON DELETE CASCADE,
+                title VARCHAR(255) NOT NULL,
+                message TEXT,
+                starts_at TIMESTAMPTZ NOT NULL,
+                ends_at TIMESTAMPTZ NOT NULL
             )
         """)
 

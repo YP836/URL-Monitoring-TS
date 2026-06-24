@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig } from 'axios';
-import { URLItem, AddURLPayload, URLDetail, UserRead, AdminUserOverview, UserUpdate, Incident, AlertChannel, AlertChannelPayload, AlertChannelUpdate, AlertDelivery } from '../types';
+import { URLItem, AddURLPayload, URLDetail, UserRead, AdminUserOverview, UserUpdate, Incident, AlertChannel, AlertChannelPayload, AlertChannelUpdate, AlertDelivery, PublicStatus, MaintenanceWindow } from '../types';
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -167,7 +167,7 @@ export async function deleteUser(id: number): Promise<void> {
   await client.delete(`/api/v1/users/${id}`);
 };
 
-export const updateUrl = async (id: number, payload: { name?: string; web_address?: string; ping_interval_seconds?: number }): Promise<URLItem> => {
+export const updateUrl = async (id: number, payload: { name?: string; web_address?: string; ping_interval_seconds?: number; is_public?: boolean }): Promise<URLItem> => {
   const response = await client.put<URLItem>(`/api/v1/urls/${id}`, payload);
   return response.data;
 };
@@ -240,4 +240,23 @@ export const testAlertChannel = async (id: number): Promise<AlertDelivery> => {
 export const getAlertDeliveries = async (): Promise<AlertDelivery[]> => {
   const response = await client.get<AlertDelivery[]>('/api/v1/alerts/deliveries');
   return response.data;
+};
+
+export const getPublicStatus = async (): Promise<PublicStatus> => {
+  const response = await client.get<PublicStatus>('/api/v1/public/status');
+  return response.data;
+};
+
+export const createMaintenanceWindow = async (payload: { url_ids: number[]; title: string; message?: string; starts_at: string; ends_at: string }): Promise<MaintenanceWindow[]> => {
+  const response = await client.post<MaintenanceWindow[]>('/api/v1/maintenance', payload);
+  return response.data;
+};
+
+export const getMaintenanceWindows = async (): Promise<MaintenanceWindow[]> => {
+  const response = await client.get<MaintenanceWindow[]>('/api/v1/maintenance');
+  return response.data;
+};
+
+export const deleteMaintenanceWindow = async (id: number): Promise<void> => {
+  await client.delete(`/api/v1/maintenance/${id}`);
 };

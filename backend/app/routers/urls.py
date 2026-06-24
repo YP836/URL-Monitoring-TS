@@ -59,7 +59,7 @@ async def _fetch_visible_url(conn: Any, url_id: int, current_user: UserRead) -> 
             SELECT
                 urls.id, urls.web_address, urls.name, urls.status, urls.created_at, urls.check_type,
                 urls.keyword_to_find, urls.check_interval_seconds, urls.ping_interval_seconds,
-                users.email as owner_email
+                users.email as owner_email, urls.is_public
             FROM urls
             LEFT JOIN users ON urls.user_id = users.id
             WHERE urls.id = $1
@@ -71,7 +71,7 @@ async def _fetch_visible_url(conn: Any, url_id: int, current_user: UserRead) -> 
         """
         SELECT
             id, web_address, name, status, created_at, check_type, keyword_to_find,
-            check_interval_seconds, ping_interval_seconds
+            check_interval_seconds, ping_interval_seconds, is_public
         FROM urls
         WHERE id = $1 AND user_id = $2
         """,
@@ -90,7 +90,7 @@ async def list_urls(current_user: Annotated[UserRead, Depends(get_current_user)]
                     """
                     SELECT
                         urls.id, urls.web_address, urls.name, urls.status, urls.created_at, urls.check_type, urls.keyword_to_find,
-                        urls.check_interval_seconds, urls.ping_interval_seconds, users.email as owner_email
+                        urls.check_interval_seconds, urls.ping_interval_seconds, users.email as owner_email, urls.is_public
                     FROM urls
                     LEFT JOIN users ON urls.user_id = users.id
                     ORDER BY urls.created_at DESC
@@ -101,7 +101,7 @@ async def list_urls(current_user: Annotated[UserRead, Depends(get_current_user)]
                     """
                     SELECT
                         id, web_address, name, status, created_at, check_type, keyword_to_find,
-                        check_interval_seconds, ping_interval_seconds
+                        check_interval_seconds, ping_interval_seconds, is_public
                     FROM urls WHERE user_id = $1
                     ORDER BY created_at DESC
                     """, current_user.id
@@ -140,7 +140,7 @@ async def create_url(payload: URLCreate, current_user: Annotated[UserRead, Depen
                 VALUES ($1, $2, $3, 'PENDING', NOW(), $4, $5, $6, $7)
                 RETURNING
                     id, web_address, name, status, created_at, check_type, keyword_to_find,
-                    check_interval_seconds, ping_interval_seconds
+                    check_interval_seconds, ping_interval_seconds, is_public
                 """,
                 current_user.id,
                 web_address,
@@ -319,19 +319,22 @@ async def update_url(url_id: int, payload: URLUpdate, current_user: Annotated[Us
                 else existing["ping_interval_seconds"]
             )
 
+            new_is_public = payload.is_public if payload.is_public is not None else existing.get("is_public", False)
+
             row = await conn.fetchrow(
                 """
                 UPDATE urls
-                SET web_address = $1, name = $2, ping_interval_seconds = $3, check_interval_seconds = $3
+                SET web_address = $1, name = $2, ping_interval_seconds = $3, check_interval_seconds = $3, is_public = $5
                 WHERE id = $4
                 RETURNING
                     id, web_address, name, status, created_at, check_type, keyword_to_find,
-                    check_interval_seconds, ping_interval_seconds
+                    check_interval_seconds, ping_interval_seconds, is_public
                 """,
                 new_web_address,
                 new_name,
                 new_interval,
                 url_id,
+                new_is_public,
             )
             return URLRead(**dict(row))
     except HTTPException:

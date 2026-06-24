@@ -7,6 +7,7 @@ import { UrlDetailPage } from './pages/UrlDetailPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { TeamPage } from './pages/TeamPage';
+import { PublicStatusPage } from './pages/PublicStatusPage';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -34,6 +35,7 @@ function App() {
             <Route path="/launch" element={<LaunchPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/status" element={<PublicStatusPage />} />
             
             {/* Protected Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard view="home" /></ProtectedRoute>} />
