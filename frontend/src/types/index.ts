@@ -81,6 +81,48 @@ export interface UserRead {
   created_at: string;
 }
 
+export type AlertChannelType = 'EMAIL' | 'WEBHOOK';
+
+export interface AlertChannel {
+  id: number;
+  channel_type: AlertChannelType;
+  name: string;
+  destination: string;
+  notify_on_down: boolean;
+  notify_on_recovery: boolean;
+  is_enabled: boolean;
+  created_at: string;
+  last_delivery_status: 'SENT' | 'FAILED' | null;
+  last_delivery_at: string | null;
+}
+
+export interface AlertChannelPayload {
+  channel_type: AlertChannelType;
+  name: string;
+  destination: string;
+  notify_on_down: boolean;
+  notify_on_recovery: boolean;
+}
+
+export interface AlertChannelUpdate {
+  name?: string;
+  destination?: string;
+  notify_on_down?: boolean;
+  notify_on_recovery?: boolean;
+  is_enabled?: boolean;
+}
+
+export interface AlertDelivery {
+  id: number;
+  channel_id: number | null;
+  channel_name: string | null;
+  url_name: string | null;
+  event_type: 'DOWN' | 'UP' | 'TEST';
+  status: 'SENT' | 'FAILED';
+  error: string | null;
+  created_at: string;
+}
+
 export interface Incident {
   id: number;
   url_id: number;

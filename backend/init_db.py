@@ -59,6 +59,39 @@ def migrate_monitor_columns(cur):
         )
     """)
 
+def migrate_alerts_tables(cur):
+    """Create alert channel + delivery log tables for the notifications feature."""
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS alert_channels (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          channel_type VARCHAR(20) NOT NULL,
+          name VARCHAR(100) NOT NULL,
+          destination TEXT NOT NULL,
+          notify_on_down BOOLEAN NOT NULL DEFAULT true,
+          notify_on_recovery BOOLEAN NOT NULL DEFAULT true,
+          is_enabled BOOLEAN NOT NULL DEFAULT true,
+          created_at TIMESTAMPTZ DEFAULT now()
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS alert_deliveries (
+          id SERIAL PRIMARY KEY,
+          channel_id INTEGER REFERENCES alert_channels(id) ON DELETE CASCADE,
+          url_id INTEGER REFERENCES urls(id) ON DELETE SET NULL,
+          incident_id INTEGER,
+          event_type VARCHAR(10) NOT NULL,
+          status VARCHAR(10) NOT NULL,
+          error TEXT,
+          created_at TIMESTAMPTZ DEFAULT now()
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_alert_deliveries_channel
+        ON alert_deliveries (channel_id, created_at DESC)
+    """)
+
+
 ADMIN_EMAILS = [
     "pathania.yuvraj@thinksys.com",
     "singh.yatharth@thinksys.com",
@@ -156,6 +189,9 @@ def init_db():
 
         print("Migrating incidents columns...")
         migrate_incidents_columns(cur)
+
+        print("Creating alert tables...")
+        migrate_alerts_tables(cur)
 
         print("Seeding admin accounts...")
         seed_admin_accounts(cur)

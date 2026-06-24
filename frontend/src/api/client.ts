@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig } from 'axios';
-import { URLItem, AddURLPayload, URLDetail, UserRead, AdminUserOverview, UserUpdate, Incident } from '../types';
+import { URLItem, AddURLPayload, URLDetail, UserRead, AdminUserOverview, UserUpdate, Incident, AlertChannel, AlertChannelPayload, AlertChannelUpdate, AlertDelivery } from '../types';
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -210,5 +210,34 @@ export const acknowledgeIncident = async (id: number): Promise<Incident> => {
 
 export const addIncidentNote = async (id: number, note: string): Promise<Incident> => {
   const response = await client.patch<Incident>(`/api/v1/incidents/${id}`, { note });
+  return response.data;
+};
+
+export const getAlertChannels = async (): Promise<AlertChannel[]> => {
+  const response = await client.get<AlertChannel[]>('/api/v1/alerts/channels');
+  return response.data;
+};
+
+export const createAlertChannel = async (payload: AlertChannelPayload): Promise<AlertChannel> => {
+  const response = await client.post<AlertChannel>('/api/v1/alerts/channels', payload);
+  return response.data;
+};
+
+export const updateAlertChannel = async (id: number, payload: AlertChannelUpdate): Promise<AlertChannel> => {
+  const response = await client.patch<AlertChannel>(`/api/v1/alerts/channels/${id}`, payload);
+  return response.data;
+};
+
+export const deleteAlertChannel = async (id: number): Promise<void> => {
+  await client.delete(`/api/v1/alerts/channels/${id}`);
+};
+
+export const testAlertChannel = async (id: number): Promise<AlertDelivery> => {
+  const response = await client.post<AlertDelivery>(`/api/v1/alerts/channels/${id}/test`, undefined, { timeout: 30000 });
+  return response.data;
+};
+
+export const getAlertDeliveries = async (): Promise<AlertDelivery[]> => {
+  const response = await client.get<AlertDelivery[]>('/api/v1/alerts/deliveries');
   return response.data;
 };

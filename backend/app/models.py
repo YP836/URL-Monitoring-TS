@@ -119,3 +119,55 @@ class IncidentRead(BaseModel):
 class IncidentUpdate(BaseModel):
     acknowledged_at: datetime | None = None
     note: str | None = None
+
+
+class AlertChannelCreate(BaseModel):
+    channel_type: str = Field(..., pattern="^(EMAIL|WEBHOOK)$")
+    name: str = Field(..., min_length=1, max_length=100)
+    destination: str = Field(..., min_length=1)
+    notify_on_down: bool = True
+    notify_on_recovery: bool = True
+
+    @model_validator(mode="after")
+    def validate_destination(self) -> "AlertChannelCreate":
+        dest = self.destination.strip()
+        if self.channel_type == "EMAIL":
+            if "@" not in dest or "." not in dest.split("@")[-1]:
+                raise ValueError("destination must be a valid email address")
+        elif self.channel_type == "WEBHOOK":
+            if not (dest.startswith("http://") or dest.startswith("https://")):
+                raise ValueError("destination must be an http(s) webhook URL")
+        self.destination = dest
+        return self
+
+
+class AlertChannelUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=100)
+    destination: str | None = Field(None, min_length=1)
+    notify_on_down: bool | None = None
+    notify_on_recovery: bool | None = None
+    is_enabled: bool | None = None
+
+
+class AlertChannelRead(BaseModel):
+    id: int
+    channel_type: str
+    name: str
+    destination: str
+    notify_on_down: bool
+    notify_on_recovery: bool
+    is_enabled: bool
+    created_at: datetime
+    last_delivery_status: str | None = None
+    last_delivery_at: datetime | None = None
+
+
+class AlertDeliveryRead(BaseModel):
+    id: int
+    channel_id: int | None
+    channel_name: str | None = None
+    url_name: str | None = None
+    event_type: str
+    status: str
+    error: str | None
+    created_at: datetime

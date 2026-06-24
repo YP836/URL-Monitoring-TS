@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import modalStyles from '../components/urls/UrlCard.module.css';
 import { AddUrlModal } from '../components/urls/AddUrlModal';
+import { AlertsView } from '../components/alerts/AlertsView';
 import { Toast } from '../components/ui/Toast';
 import { Badge } from '../components/ui/Badge';
 import { PageLayout } from '../components/layout/PageLayout';
@@ -741,14 +742,7 @@ export function Dashboard({ view = 'home' }: DashboardProps) {
     </div>
   );
 
-  const renderAlerts = () => (
-    <section className="ops-card-grid">
-      <OperationalCard icon="ti-brand-slack" title="Slack critical" value="Enabled" detail="WARN and DOWN events route to #ops-monitoring." />
-      <OperationalCard icon="ti-mail" title="Email digest" value="Daily" detail="Summary of incidents, downtime, and slow checks." />
-      <OperationalCard icon="ti-phone-call" title="On-call SMS" value="Critical only" detail="Escalates DOWN events after two failed checks." />
-      <OperationalCard icon="ti-webhook" title="Webhook stream" value="Ready" detail="Pushes monitor status JSON into external automations." />
-    </section>
-  );
+  const renderAlerts = () => <AlertsView />;
 
   const renderReports = () => (
     <div className="ops-panel">

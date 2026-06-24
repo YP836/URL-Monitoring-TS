@@ -97,6 +97,9 @@ def _write_check_results(results: list[CheckResult]) -> None:
             was_problem = old_status in ("DOWN", "WARN")
             is_problem = overall_status in ("DOWN", "WARN")
 
+            # Captured so we can fire alerts AFTER the transaction commits.
+            alert_event: tuple[str, int | None] | None = None
+
             if is_problem and not was_problem:
                 cur.execute(
                     "SELECT id FROM url_incidents WHERE url_id = %s AND resolved_at IS NULL",
@@ -109,15 +112,30 @@ def _write_check_results(results: list[CheckResult]) -> None:
                     )
                     cur.execute(
                         """INSERT INTO url_incidents (url_id, started_at, check_type, severity)
-                           VALUES (%s, NOW(), %s, %s)""",
+                           VALUES (%s, NOW(), %s, %s)
+                           RETURNING id""",
                         (url_id, triggering_check, overall_status),
                     )
+                    new_incident_id = cur.fetchone()[0]
+                    alert_event = ("DOWN", new_incident_id)
             elif not is_problem and was_problem:
                 cur.execute(
                     "UPDATE url_incidents SET resolved_at = NOW() WHERE url_id = %s AND resolved_at IS NULL",
                     (url_id,),
                 )
+                alert_event = ("UP", None)
         conn.commit()
+
+        # Fire alerts only after a successful commit so we never notify on a
+        # rolled-back write. A Redis/Celery outage must not break the ping path.
+        if alert_event is not None:
+            event_type, incident_id = alert_event
+            try:
+                dispatch_alerts.apply_async(
+                    args=[url_id, event_type, incident_id], expires=120
+                )
+            except Exception:
+                logger.exception("[ping_url] Failed to enqueue alert url_id=%s", url_id)
     except Exception:
         logger.exception("[ping_url] Failed to write ping results url_id=%s", url_id)
         if conn is not None:
@@ -179,6 +197,114 @@ def _publish_ping_result(payload: dict[str, Any]) -> None:
     finally:
         if client is not None:
             client.close()
+
+
+def _record_delivery(cur, channel_id, url_id, incident_id, event_type, status, error):
+    cur.execute(
+        """
+        INSERT INTO alert_deliveries
+            (channel_id, url_id, incident_id, event_type, status, error)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """,
+        (channel_id, url_id, incident_id, event_type, status, error),
+    )
+
+
+@celery_app.task(name="app.worker.tasks.dispatch_alerts")
+def dispatch_alerts(url_id: int, event_type: str, incident_id: int | None = None) -> dict:
+    """Deliver an alert for a monitor transition to all matching enabled channels.
+
+    event_type is one of DOWN | UP | TEST. Every attempt (success or failure) is
+    logged to alert_deliveries so the UI can prove what was actually sent.
+    """
+    from app.worker.notifications import build_alert_message, send_email, send_webhook
+
+    conn = None
+    sent = 0
+    failed = 0
+    try:
+        conn = _get_sync_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT name, web_address, user_id FROM urls WHERE id = %s",
+                (url_id,),
+            )
+            url_row = cur.fetchone()
+            if not url_row:
+                return {"sent": 0, "failed": 0, "reason": "url_not_found"}
+            url_name, web_address, user_id = url_row
+
+            severity = None
+            started_at = None
+            duration_min = None
+            if incident_id is not None:
+                cur.execute(
+                    "SELECT severity, started_at FROM url_incidents WHERE id = %s",
+                    (incident_id,),
+                )
+                inc = cur.fetchone()
+                if inc:
+                    severity, started_at = inc
+
+            cur.execute(
+                """
+                SELECT id, channel_type, destination
+                FROM alert_channels
+                WHERE user_id = %s
+                  AND is_enabled = true
+                  AND (
+                        (%s = 'DOWN' AND notify_on_down)
+                     OR (%s = 'UP'   AND notify_on_recovery)
+                     OR (%s = 'TEST')
+                  )
+                """,
+                (user_id, event_type, event_type, event_type),
+            )
+            channels = cur.fetchall()
+
+            subject, text, html = build_alert_message(
+                event_type, url_name, web_address, severity, started_at, duration_min
+            )
+            payload = {
+                "event": event_type,
+                "url_name": url_name,
+                "url_address": web_address,
+                "severity": severity,
+                "timestamp": (started_at or datetime.utcnow()).isoformat(),
+            }
+
+            for channel_id, channel_type, destination in channels:
+                try:
+                    if channel_type == "EMAIL":
+                        send_email(destination, subject, text, html)
+                    elif channel_type == "WEBHOOK":
+                        send_webhook(destination, text, payload)
+                    else:
+                        raise ValueError(f"Unknown channel type {channel_type}")
+                    _record_delivery(
+                        cur, channel_id, url_id, incident_id, event_type, "SENT", None
+                    )
+                    sent += 1
+                except Exception as exc:
+                    _record_delivery(
+                        cur, channel_id, url_id, incident_id, event_type, "FAILED", str(exc)[:500]
+                    )
+                    failed += 1
+                    logger.warning(
+                        "[dispatch_alerts] channel=%s failed: %s", channel_id, exc
+                    )
+        conn.commit()
+    except Exception:
+        logger.exception("[dispatch_alerts] url_id=%s event=%s failed", url_id, event_type)
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+    finally:
+        if conn is not None:
+            conn.close()
+    return {"sent": sent, "failed": failed}
 
 
 @celery_app.task(
