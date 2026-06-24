@@ -78,7 +78,7 @@ export function PublicStatusPage() {
           {monitors.map(monitor => (
             <div key={monitor.id} className="monitor-row">
               <div className="monitor-info">
-                <StatusDot status={monitor.status} size="small" />
+                <StatusDot status={monitor.status} />
                 <span className="monitor-name">{monitor.name}</span>
               </div>
               <div className="monitor-stats">

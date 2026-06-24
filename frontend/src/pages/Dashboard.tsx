@@ -102,11 +102,7 @@ const integrations = [
   ['REST API', 'Automate monitors, exports, and status pages.', 'Available', 'ti-code'],
 ];
 
-const maintenanceWindows = [
-  ['Database patch', 'Sunday 02:00 - 02:45', 'Affects Supabase and internal API monitors'],
-  ['CDN rules deploy', 'Wednesday 23:30 - 23:50', 'Cloudflare and Vercel edge checks muted'],
-  ['Checkout release', 'Friday 01:00 - 01:20', 'Stripe API and keyword checks watched closely'],
-];
+
 
 const reportCards = [
   ['Executive uptime report', 'Fleet uptime, SLA, and major incidents', 'PDF export'],
