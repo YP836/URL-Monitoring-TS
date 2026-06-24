@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { createMaintenanceWindow } from '../../api/client';
-import modalStyles from '../urls/UrlCard.module.css';
 import { Toast } from '../ui/Toast';
 
 interface MaintenanceModalProps {
@@ -20,6 +19,14 @@ export function MaintenanceModal({ urlId, urlName, urls = [], onClose, onSuccess
   const [endsAt, setEndsAt] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,95 +59,131 @@ export function MaintenanceModal({ urlId, urlName, urls = [], onClose, onSuccess
 
   return (
     <>
-    <motion.div
-      className={modalStyles.modalOverlay}
-      onClick={onClose}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
       <motion.div
-        className={modalStyles.addUrlDialog}
-        onClick={(e) => e.stopPropagation()}
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
+        className="add-url-modal-backdrop"
+        role="presentation"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
       >
-        <h2 style={{ marginTop: 0 }}>Schedule Maintenance</h2>
-        <p style={{ color: '#667085', fontSize: '0.9rem', marginBottom: 20 }}>
-          {urlName ? `For ${urlName}.` : 'Select monitors to schedule downtime.'} This will display on the public status page.
-        </p>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {!urlId && urls.length > 0 && (
-            <label className={modalStyles.formGroup}>
-              <span>Affected Monitors *</span>
-              <div style={{ maxHeight: 150, overflowY: 'auto', border: '1px solid #d1d5db', borderRadius: 6, padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {urls.map(u => (
-                  <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.9rem', cursor: 'pointer', fontWeight: 'normal' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={selectedUrlIds.includes(u.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) setSelectedUrlIds([...selectedUrlIds, u.id]);
-                        else setSelectedUrlIds(selectedUrlIds.filter(id => id !== u.id));
-                      }}
-                    />
-                    {u.name}
-                  </label>
-                ))}
-              </div>
-            </label>
-          )}
-          <label className={modalStyles.formGroup}>
-            <span>Title *</span>
-            <input 
-              type="text" 
-              required
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Database Upgrade"
-            />
-          </label>
-          <label className={modalStyles.formGroup}>
-            <span>Message</span>
-            <textarea 
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-              placeholder="Describe the maintenance..."
-              style={{ padding: 10, borderRadius: 6, border: '1px solid #d1d5db', minHeight: 60 }}
-            />
-          </label>
-          <label className={modalStyles.formGroup}>
-            <span>Starts at *</span>
-            <input 
-              type="datetime-local" 
-              required
-              value={startsAt}
-              onChange={e => setStartsAt(e.target.value)}
-            />
-          </label>
-          <label className={modalStyles.formGroup}>
-            <span>Ends at *</span>
-            <input 
-              type="datetime-local" 
-              required
-              value={endsAt}
-              onChange={e => setEndsAt(e.target.value)}
-            />
-          </label>
-          
-          <div className={modalStyles.dialogActions} style={{ marginTop: 8 }}>
-            <button type="button" className={modalStyles.cancelBtn} onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </button>
-            <button type="submit" className={modalStyles.primaryBtn} disabled={isSubmitting}>
-              {isSubmitting ? 'Scheduling...' : 'Schedule'}
+        <motion.div
+          className="add-url-modal-panel step-modal-panel"
+          role="dialog"
+          onClick={(e) => e.stopPropagation()}
+          initial={{ opacity: 0, y: 18, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 12, scale: 0.97 }}
+          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="add-url-modal-header">
+            <div>
+              <p className="landing-kicker modal-kicker"><i className="ti ti-calendar-event"></i> MAINTENANCE</p>
+              <h2>Schedule downtime</h2>
+              <p className="modal-subtitle">
+                {urlName ? `For ${urlName}.` : 'Select monitors to schedule downtime.'} This will display on the public status page.
+              </p>
+            </div>
+            <button type="button" className="add-url-modal-close" onClick={onClose} aria-label="Close modal">
+              x
             </button>
           </div>
-        </form>
+
+          <form className="monitor-form step-modal-form" onSubmit={handleSubmit}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '10px 4px 20px' }}>
+              {!urlId && urls.length > 0 && (
+                <div className="monitor-field">
+                  <label>Affected Monitors <span className="req">*</span></label>
+                  <div style={{ maxHeight: 150, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--card-bg)' }}>
+                    {urls.map(u => (
+                      <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', cursor: 'pointer', color: 'var(--text-main)' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={selectedUrlIds.includes(u.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedUrlIds([...selectedUrlIds, u.id]);
+                            else setSelectedUrlIds(selectedUrlIds.filter(id => id !== u.id));
+                          }}
+                          style={{ width: '16px', height: '16px', accentColor: 'var(--accent)' }}
+                        />
+                        {u.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="monitor-field">
+                <label>Title <span className="req">*</span></label>
+                <div className="input-with-icon">
+                  <i className="ti ti-heading"></i>
+                  <input 
+                    type="text" 
+                    required
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    placeholder="e.g. Database Upgrade"
+                  />
+                </div>
+              </div>
+
+              <div className="monitor-field">
+                <label>Message</label>
+                <div className="input-with-icon" style={{ alignItems: 'flex-start' }}>
+                  <i className="ti ti-message" style={{ marginTop: '12px' }}></i>
+                  <textarea 
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                    placeholder="Describe the maintenance..."
+                    style={{ width: '100%', minHeight: '80px', padding: '12px 12px 12px 42px', borderRadius: '8px', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text-main)', fontSize: '0.95rem', resize: 'vertical' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <div className="monitor-field" style={{ flex: 1 }}>
+                  <label>Starts at <span className="req">*</span></label>
+                  <div className="input-with-icon">
+                    <i className="ti ti-clock"></i>
+                    <input 
+                      type="datetime-local" 
+                      required
+                      value={startsAt}
+                      onChange={e => setStartsAt(e.target.value)}
+                      style={{ paddingLeft: '42px' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="monitor-field" style={{ flex: 1 }}>
+                  <label>Ends at <span className="req">*</span></label>
+                  <div className="input-with-icon">
+                    <i className="ti ti-clock-stop"></i>
+                    <input 
+                      type="datetime-local" 
+                      required
+                      value={endsAt}
+                      onChange={e => setEndsAt(e.target.value)}
+                      style={{ paddingLeft: '42px' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="step-modal-footer">
+              <button type="button" className="cancel-btn" onClick={onClose} disabled={isSubmitting}>
+                Cancel
+              </button>
+              <button type="submit" className="primary save-monitor-btn" disabled={isSubmitting}>
+                {isSubmitting ? 'Scheduling...' : 'Schedule downtime'} <i className="ti ti-calendar-event"></i>
+              </button>
+            </div>
+          </form>
+        </motion.div>
       </motion.div>
-    </motion.div>
-    {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
+      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </>
   );
 }
