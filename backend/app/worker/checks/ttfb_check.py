@@ -28,9 +28,9 @@ def run_ttfb_check(url_id: int, web_address: str) -> CheckResult:
                     ttfb_ms = int((time.monotonic() - start) * 1000)
         total_ms = int((time.monotonic() - start) * 1000)
 
-        if ttfb_ms < 200:
+        if ttfb_ms < 800:
             status = "UP"
-        elif ttfb_ms < 800:
+        elif ttfb_ms < 3000:
             status = "WARN"
         else:
             status = "DOWN"

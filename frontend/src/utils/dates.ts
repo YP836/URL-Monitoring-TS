@@ -1,6 +1,5 @@
 export function parseApiDate(value: string): Date {
-  const hasTimezone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(value);
-  return new Date(hasTimezone ? value : `${value}Z`);
+  return new Date(value);
 }
 
 export function timeAgo(value: string): string {

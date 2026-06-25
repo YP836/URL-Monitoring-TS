@@ -150,21 +150,22 @@ export function UrlDetailPage() {
 
   useEffect(() => {
     if (!lastMessage || lastMessage.url_id !== urlId) return;
-    const nextPing: PingHistoryRead = {
-      id: Date.now(),
-      url_id: lastMessage.url_id,
-      checked_at: lastMessage.checked_at,
-      response_time_ms: lastMessage.latency_ms,
-      status_code: lastMessage.status_code ?? null,
-      is_up: lastMessage.status === 'UP',
-    };
-    setLivePings(previous => [nextPing, ...previous].slice(0, 3000));
-    if (lastMessage.extra_data && lastMessage.check_type) {
-      setExtraData((previous) => ({
-        ...(previous ?? {}),
-        [lastMessage.check_type as string]: lastMessage.extra_data as Record<string, unknown>,
-      }));
-    }
+
+    let mounted = true;
+    import('../api/client').then(m => {
+      m.getUrlDetail(urlId).then(data => {
+        if (!mounted) return;
+        setUrl(data);
+        setLivePings(data.recent_pings);
+      }).catch(console.error);
+
+      m.getUrlExtraData(urlId).then(data => {
+        if (!mounted) return;
+        setExtraData(data.extra_data);
+      }).catch(console.error);
+    });
+
+    return () => { mounted = false; };
   }, [urlId, lastMessage]);
   const currentStatus =
     lastMessage?.url_id === urlId
