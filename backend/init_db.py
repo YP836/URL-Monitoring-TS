@@ -59,6 +59,27 @@ def migrate_monitor_columns(cur):
         )
     """)
 
+def migrate_scheduling_columns(cur):
+    """Phase 1: next_check_at scheduling model + monitor state columns.
+
+    last_pinged_at stays the canonical 'last checked at'. next_check_at drives
+    due-monitor selection; the counters/last_error_reason back false-down
+    protection (Phase 2).
+    """
+    cur.execute("""
+        ALTER TABLE urls
+          ADD COLUMN IF NOT EXISTS next_check_at         TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS last_status_change_at TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS consecutive_failures  INTEGER NOT NULL DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS consecutive_successes INTEGER NOT NULL DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS last_error_reason     TEXT
+    """)
+    cur.execute("UPDATE urls SET next_check_at = NOW() WHERE next_check_at IS NULL")
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_urls_next_check_at ON urls (next_check_at)
+    """)
+
+
 def migrate_alerts_tables(cur):
     """Create alert channel + delivery log tables for the notifications feature."""
     cur.execute("""
@@ -202,6 +223,9 @@ def init_db():
 
         print("Migrating incidents columns...")
         migrate_incidents_columns(cur)
+
+        print("Adding scheduling columns...")
+        migrate_scheduling_columns(cur)
 
         print("Creating alert tables...")
         migrate_alerts_tables(cur)

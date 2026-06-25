@@ -39,11 +39,13 @@ def _run_check_now_sync(url_id: int, web_address: str, check_type: str, keyword:
     return ping_url.apply(args=[url_id, web_address, check_type, keyword]).get()
 
 
-def _enqueue_selected_checks(url_id: int, web_address: str, check_type: str, keyword: str | None) -> None:
+def _enqueue_selected_checks(
+    url_id: int, web_address: str, check_type: str, keyword: str | None, manual: bool = False
+) -> None:
     for index, selected_check in enumerate(_split_check_types(check_type)):
         try:
             ping_url.apply_async(
-                args=[url_id, web_address, selected_check, keyword],
+                args=[url_id, web_address, selected_check, keyword, manual],
                 expires=25,
                 countdown=index * 2,
             )
@@ -272,29 +274,33 @@ async def get_url_extra_data(url_id: int, current_user: Annotated[UserRead, Depe
         raise HTTPException(status_code=404, detail="No extra data found")
 
 
-@router.post("/urls/{url_id}/check")
+@router.post("/urls/{url_id}/check", status_code=status.HTTP_202_ACCEPTED)
 async def check_url_now(url_id: int, current_user: Annotated[UserRead, Depends(get_current_user)]) -> dict[str, Any]:
-    """Run the selected checks for a URL immediately."""
+    """Queue an immediate re-check. Returns 202 right away; the worker runs the
+    checks in the background and pushes the outcome over WebSocket (poll is the
+    durable fallback). This keeps the API request from blocking on slow probes."""
     async with get_connection() as conn:
         row = await _fetch_visible_url(conn, url_id, current_user)
         if not row:
             raise HTTPException(status_code=404, detail="URL not found")
 
-    results: list[dict[str, Any]] = []
-    for selected_check in _split_check_types(row["check_type"]):
-        result = await run_in_threadpool(
-            _run_check_now_sync,
-            row["id"],
-            row["web_address"],
-            selected_check,
-            row["keyword_to_find"],
-        )
-        results.append(result)
+    selected_checks = _split_check_types(row["check_type"])
+    # Fire-and-forget onto Celery; never block the request on the probe itself.
+    # manual=True so the worker pushes the result over WebSocket even if the
+    # status did not change (the user asked for it and is watching).
+    await run_in_threadpool(
+        _enqueue_selected_checks,
+        row["id"],
+        row["web_address"],
+        row["check_type"],
+        row["keyword_to_find"],
+        True,
+    )
 
     return {
         "url_id": url_id,
-        "checks_run": len(results),
-        "results": results,
+        "status": "queued",
+        "checks_enqueued": len(selected_checks),
     }
 
 

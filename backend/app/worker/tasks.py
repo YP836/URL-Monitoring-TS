@@ -8,6 +8,13 @@ from psycopg2.extras import Json
 
 from app.config import settings
 from app.worker.celery_app import celery_app
+from app.worker.incidents import (
+    OPEN_INCIDENT,
+    RESOLVE_INCIDENT,
+    MonitorState,
+    TransitionDecision,
+    decide_transition,
+)
 from app.worker.checks import (
     CheckResult,
     run_downtime_duration_check,
@@ -35,10 +42,25 @@ def _status_to_is_up(status: str) -> bool:
     return status in {"UP", "WARN"}
 
 
-def _write_check_results(results: list[CheckResult]) -> None:
+def _derive_error_reason(results: list[CheckResult]) -> str | None:
+    """Human-readable reason for the failing check, stored on the monitor."""
+    for result in results:
+        if result.status == "DOWN":
+            extra = result.extra_data or {}
+            if extra.get("error"):
+                return str(extra["error"])[:300]
+            code = extra.get("status_code")
+            if code:
+                return f"HTTP {code}"
+            return f"{result.check_type} check failed"
+    return None
+
+
+def _write_check_results(results: list[CheckResult]) -> TransitionDecision | None:
     if not results:
-        return
+        return None
     url_id = results[0].url_id
+    decision = None
     
     # Compute worst status
     overall_status = "UP"
@@ -85,40 +107,60 @@ def _write_check_results(results: list[CheckResult]) -> None:
                         ),
                     )
             
-            cur.execute("SELECT status FROM urls WHERE id = %s", (url_id,))
+            # Load current debounced state and run the false-down state machine.
+            cur.execute(
+                "SELECT status, consecutive_failures, consecutive_successes FROM urls WHERE id = %s",
+                (url_id,),
+            )
             row = cur.fetchone()
-            old_status = row[0] if row else "PENDING"
+            current = MonitorState(row[0] or "PENDING", row[1] or 0, row[2] or 0) if row else MonitorState("PENDING")
+
+            decision = decide_transition(current, overall_status)
+            error_reason = _derive_error_reason(results) if decision.status == "DOWN" else None
 
             cur.execute(
-                "UPDATE urls SET status = %s, last_pinged_at = NOW() WHERE id = %s",
-                (overall_status, url_id),
+                """
+                UPDATE urls SET
+                    status = %s,
+                    last_pinged_at = NOW(),
+                    consecutive_failures = %s,
+                    consecutive_successes = %s,
+                    last_error_reason = %s,
+                    last_status_change_at = CASE WHEN %s THEN NOW() ELSE last_status_change_at END
+                WHERE id = %s
+                """,
+                (
+                    decision.status,
+                    decision.consecutive_failures,
+                    decision.consecutive_successes,
+                    error_reason,
+                    decision.status_changed,
+                    url_id,
+                ),
             )
-
-            was_problem = old_status in ("DOWN", "WARN")
-            is_problem = overall_status in ("DOWN", "WARN")
 
             # Captured so we can fire alerts AFTER the transaction commits.
             alert_event: tuple[str, int | None] | None = None
 
-            if is_problem and not was_problem:
+            if decision.action == OPEN_INCIDENT:
+                # Belt-and-suspenders: never open a second concurrent incident.
                 cur.execute(
                     "SELECT id FROM url_incidents WHERE url_id = %s AND resolved_at IS NULL",
                     (url_id,),
                 )
                 if not cur.fetchone():
                     triggering_check = next(
-                        (r.check_type for r in results if r.status == overall_status),
+                        (r.check_type for r in results if r.status == "DOWN"),
                         results[0].check_type,
                     )
                     cur.execute(
                         """INSERT INTO url_incidents (url_id, started_at, check_type, severity)
-                           VALUES (%s, NOW(), %s, %s)
+                           VALUES (%s, NOW(), %s, 'DOWN')
                            RETURNING id""",
-                        (url_id, triggering_check, overall_status),
+                        (url_id, triggering_check),
                     )
-                    new_incident_id = cur.fetchone()[0]
-                    alert_event = ("DOWN", new_incident_id)
-            elif not is_problem and was_problem:
+                    alert_event = ("DOWN", cur.fetchone()[0])
+            elif decision.action == RESOLVE_INCIDENT:
                 cur.execute(
                     "UPDATE url_incidents SET resolved_at = NOW() WHERE url_id = %s AND resolved_at IS NULL",
                     (url_id,),
@@ -146,6 +188,8 @@ def _write_check_results(results: list[CheckResult]) -> None:
     finally:
         if conn is not None:
             conn.close()
+
+    return decision
 
 
 def _run_check(
@@ -321,6 +365,7 @@ def ping_url(
     web_address: str,
     check_type: str = "HTTP",
     keyword: str | None = None,
+    manual: bool = False,
 ) -> dict:
     try:
         results = []
@@ -329,21 +374,20 @@ def ping_url(
     except Exception as exc:
         raise self.retry(exc=exc)
 
-    _write_check_results(results)
-    
+    decision = _write_check_results(results)
+
     payloads = []
     for result in results:
-        payload = {
-            "url_id": result.url_id,
-            "status": result.status,
-            "latency_ms": result.latency_ms,
-            "check_type": result.check_type,
-            "extra_data": result.extra_data,
-            "checked_at": result.checked_at,
-        }
-        _publish_ping_result(payload)
-        payloads.append(payload)
-
+        payloads.append(
+            {
+                "url_id": result.url_id,
+                "status": result.status,
+                "latency_ms": result.latency_ms,
+                "check_type": result.check_type,
+                "extra_data": result.extra_data,
+                "checked_at": result.checked_at,
+            }
+        )
         logger.info(
             "[ping_url] url_id=%s check_type=%s status=%s latency=%sms",
             result.url_id,
@@ -351,46 +395,65 @@ def ping_url(
             result.status,
             result.latency_ms,
         )
+
+    # Phase 3: the WebSocket carries only meaningful events, not every ping.
+    # Push on a real status change (UP/DOWN/WARN transition, which also covers
+    # incident open/resolve) or when the user explicitly triggered a manual
+    # check. Steady-state "still UP" pings are dropped to cut fan-out noise;
+    # the frontend's polling is the durable resync (Redis Pub/Sub is not durable).
+    status_changed = bool(decision and decision.status_changed)
+    if (status_changed or manual) and results:
+        primary = next((r for r in results if r.check_type == "HTTP"), results[0])
+        _publish_ping_result(
+            {
+                "url_id": url_id,
+                "status": decision.status if decision else primary.status,
+                "latency_ms": primary.latency_ms,
+                "status_code": (primary.extra_data or {}).get("status_code"),
+                "check_type": primary.check_type,
+                "extra_data": primary.extra_data,
+                "checked_at": primary.checked_at,
+                "event": "manual_check" if manual else "status_change",
+            }
+        )
+
     return {"results": payloads}
 
 
 @celery_app.task(name="app.worker.tasks.schedule_ping_tasks")
 def schedule_ping_tasks() -> dict:
+    """Claim due monitors and enqueue a probe for each.
+
+    Selection + duplicate prevention live in scheduler.claim_due_monitors: it
+    atomically advances next_check_at when claiming, so an in-flight monitor is
+    not re-enqueued on the next 5s tick. See scheduler.py for the full rationale.
+    """
+    from app.worker.scheduler import claim_due_monitors
+
     conn = None
+    monitors: list[dict] = []
     try:
         conn = _get_sync_conn()
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, web_address, check_type, keyword_to_find
-                FROM urls
-                WHERE last_pinged_at IS NULL
-                   OR EXTRACT(EPOCH FROM (NOW() - last_pinged_at)) >=
-                      COALESCE(ping_interval_seconds, check_interval_seconds, 30)
-                """
-            )
-            rows = cur.fetchall()
+        monitors = claim_due_monitors(conn)
     except Exception:
-        logger.exception("[schedule_ping_tasks] Failed to fetch URLs")
-        rows = []
+        logger.exception("[schedule_ping_tasks] Failed to claim due monitors")
     finally:
         if conn is not None:
             conn.close()
 
-    count = 0
-    for row in rows:
-        url_id = row["id"] if isinstance(row, dict) else row[0]
-        web_address = row["web_address"] if isinstance(row, dict) else row[1]
-        check_type = row["check_type"] if isinstance(row, dict) else row[2]
-        keyword = row["keyword_to_find"] if isinstance(row, dict) else row[3]
+    for monitor in monitors:
         ping_url.apply_async(
-            args=[url_id, web_address, check_type, keyword], 
+            args=[
+                monitor["id"],
+                monitor["web_address"],
+                monitor["check_type"],
+                monitor["keyword_to_find"],
+            ],
             expires=25,
         )
-        count += 1
 
-    logger.info("[schedule_ping_tasks] Enqueued %s ping tasks", count)
-    return {"enqueued": count, "timestamp": datetime.utcnow().isoformat()}
+    logger.info("[schedule_ping_tasks] Claimed and enqueued %s monitors", len(monitors))
+    return {"enqueued": len(monitors), "timestamp": datetime.utcnow().isoformat()}
 
 
 @celery_app.task(name="app.worker.tasks.cleanup_old_pings")
