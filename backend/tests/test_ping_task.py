@@ -33,7 +33,7 @@ def _mock_connection(rows=None):
 
 @patch("app.worker.tasks.redis.from_url")
 @patch("app.worker.tasks._get_sync_conn")
-@patch("app.worker.tasks.httpx.Client.get")
+@patch("app.worker.checks.http_check.httpx.Client.get")
 def test_ping_url_success(mock_get, mock_get_sync_conn, mock_redis_from_url):
     response = Mock()
     response.status_code = 200
@@ -43,13 +43,14 @@ def test_ping_url_success(mock_get, mock_get_sync_conn, mock_redis_from_url):
 
     result = ping_url.apply(args=[1, "https://example.com"]).get()
 
-    assert result["status"] == "UP"
-    assert result["latency_ms"] is not None
+    first = result["results"][0]
+    assert first["status"] == "UP"
+    assert first["latency_ms"] is not None
 
 
 @patch("app.worker.tasks.redis.from_url")
 @patch("app.worker.tasks._get_sync_conn")
-@patch("app.worker.tasks.httpx.Client.get")
+@patch("app.worker.checks.http_check.httpx.Client.get")
 def test_ping_url_timeout(mock_get, mock_get_sync_conn, mock_redis_from_url):
     mock_get.side_effect = httpx.TimeoutException("request timed out")
     mock_get_sync_conn.return_value = _mock_connection()
@@ -57,13 +58,14 @@ def test_ping_url_timeout(mock_get, mock_get_sync_conn, mock_redis_from_url):
 
     result = ping_url.apply(args=[1, "https://example.com"]).get()
 
-    assert result["status"] == "DOWN"
-    assert result["latency_ms"] is None
+    first = result["results"][0]
+    assert first["status"] == "DOWN"
+    assert first["latency_ms"] is None
 
 
 @patch("app.worker.tasks.redis.from_url")
 @patch("app.worker.tasks._get_sync_conn")
-@patch("app.worker.tasks.httpx.Client.get")
+@patch("app.worker.checks.http_check.httpx.Client.get")
 def test_ping_url_4xx_is_down(mock_get, mock_get_sync_conn, mock_redis_from_url):
     response = Mock()
     response.status_code = 404
@@ -73,15 +75,16 @@ def test_ping_url_4xx_is_down(mock_get, mock_get_sync_conn, mock_redis_from_url)
 
     result = ping_url.apply(args=[1, "https://example.com"]).get()
 
-    assert result["status"] == "DOWN"
+    assert result["results"][0]["status"] == "DOWN"
 
 
 @patch("app.worker.tasks.ping_url.apply_async")
 @patch("app.worker.tasks._get_sync_conn")
 def test_schedule_ping_tasks_enqueues_correctly(mock_get_sync_conn, mock_apply_async):
+    # claim_due_monitors returns claimed rows as (id, web_address, check_type, keyword)
     rows = [
-        {"id": 1, "web_address": "https://a.com"},
-        {"id": 2, "web_address": "https://b.com"},
+        (1, "https://a.com", "HTTP", None),
+        (2, "https://b.com", "HTTP", None),
     ]
     mock_get_sync_conn.return_value = _mock_connection(rows=rows)
 

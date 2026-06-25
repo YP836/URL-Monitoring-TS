@@ -11,6 +11,20 @@ logger = logging.getLogger(__name__)
 
 
 async def redis_listener(manager: ConnectionManager) -> None:
+    """Relay worker-published events from Redis Pub/Sub to WebSocket clients.
+
+    Design note (Phase 3): the worker publishes to `ping_results` ONLY on
+    meaningful events — a monitor status change (UP/DOWN/WARN), an incident
+    open/resolve, or a user-triggered manual check — not on every steady-state
+    ping. This keeps fan-out proportional to events, not to fleet size × check
+    rate (at 1k monitors that would be ~200 msg/s of mostly "still UP" noise).
+
+    Redis Pub/Sub is fire-and-forget: a client that is briefly disconnected
+    misses messages, and there is no replay. So the WebSocket stream is a
+    *latency optimization*, not the source of truth — the frontend also polls
+    on an interval to resync. Durable delivery (Redis Streams / a real broker)
+    is the next step when missed events become unacceptable.
+    """
     while True:
         client = None
         pubsub = None
