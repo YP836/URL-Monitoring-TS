@@ -207,3 +207,14 @@ class PublicMonitorRead(BaseModel):
 class PublicStatusRead(BaseModel):
     monitors: list[PublicMonitorRead]
     maintenance_windows: list[MaintenanceWindowRead]
+
+
+class MonitorMetrics(BaseModel):
+    monitor_id: int
+    range: str
+    uptime_pct: float
+    error_rate_pct: float
+    avg_response_time_ms: float | None
+    incident_count: int
+    total_downtime_minutes: int
+    current_status: str
