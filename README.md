@@ -8,26 +8,28 @@ If a tracked website goes down or its response time spikes, background workers i
 
 *   **Multi-Tenant Authentication:** Secure JWT-based login allowing users to manage their own private fleet of monitors.
 *   **Advanced Health Checks:** Beyond simple HTTP pings, configure **SSL Expiry** tracking, **TTFB** (Time to First Byte) latency tracking, and **Keyword Search** inside HTML payloads.
+*   **Computed Metrics:** Automatically tracks aggregate metrics over a 30-day window, including **Error Rate** and **Downtime Duration**.
 *   **Live Data Streaming:** Real-time dashboard updates via WebSockets for instant incident awareness.
-*   **Historical SLA Reporting:** Dynamically compute and visualize uptime percentages and latency sparklines across customizable time windows (24 hours, 7 days, 30 days, 90 days).
-*   **Incident Logging:** Persistent tracking of outages and degraded states for long-term reliability metrics.
+*   **Enterprise-Grade Alerting State Machine:** Tracks `consecutive_failures` and `consecutive_successes` to debounce network hiccups, preventing false-positive alerts before officially declaring an Incident.
+*   **Metrics API:** Dedicated analytical endpoints returning SLA reports (Uptime %, Error Pings, Outage Windows) across customizable horizons (24h, 7d, 30d).
+*   **SSRF Protection:** Built-in DNS validation actively resolves target domains and strictly blocks pings to internal, loopback, or private IP addresses, securing the worker layer from Server-Side Request Forgery attacks.
 
 ## 🏗️ Technology Stack
 
 The project is built around a continuous, real-time data loop across 5 core technologies:
 
 *   **Frontend UI:** React, TypeScript, Vite, Framer Motion, Recharts
-*   **REST API & WebSockets:** Python, FastAPI, JWT Authentication
-*   **Background Workers:** Celery (Beat Scheduler & Worker)
-*   **Message Broker:** Redis (Pub/Sub)
-*   **Database:** PostgreSQL (asyncpg)
+*   **REST API & WebSockets:** Python, FastAPI, Pydantic
+*   **Background Workers:** Celery (Beat Scheduler & Solo/Prefork Worker)
+*   **Message Broker:** Redis (Pub/Sub & Task Queue)
+*   **Database:** PostgreSQL (asyncpg & psycopg2)
 
 ## 📡 Architecture (How Data Flows)
 
-1. **React** sends a new URL payload (with configured check types) to **FastAPI** on Port 8000.
-2. **FastAPI** saves the URL securely to the authenticated user in **PostgreSQL** on Port 5432.
-3. Every 30 seconds, **Celery Beat** queries the database and drops ping instructions into **Redis** on Port 6379.
-4. The **Celery Worker** pulls instructions from Redis, executes the multi-stage health checks (HTTP, SSL, TTFB, Keyword), records the metrics, saves them back to PostgreSQL (up to 2000 historic pings per URL), and Publishes the final result to a Redis channel.
+1. **React** sends a new URL payload (with configured check types) to **FastAPI**.
+2. **FastAPI** saves the URL securely to the authenticated user in **PostgreSQL**.
+3. Every 5 seconds, **Celery Beat** queries the database and drops ping instructions into **Redis**.
+4. The **Celery Worker** pulls instructions from Redis, executes the multi-stage health checks (HTTP, SSL, TTFB, Keyword), runs the state machine to open/resolve Incidents, saves them back to PostgreSQL, and Publishes the final result to a Redis channel.
 5. **FastAPI** listens to the Redis channel and instantly shoots the payload over a permanent **WebSocket** connection back to the **React** dashboard.
 
 ## 🚀 Local Setup Instructions
@@ -74,7 +76,7 @@ Open Terminal 2:
 ```bash
 cd backend
 # Activate the virtual environment
-celery -A app.worker.celery_app worker --loglevel=info
+celery -A app.worker.celery_app worker --loglevel=info --pool=solo
 ```
 
 ### 4. Start the Celery Beat Scheduler
