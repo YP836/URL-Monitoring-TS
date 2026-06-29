@@ -43,9 +43,12 @@ async def get_monitor_metrics(
         if not url_row:
             raise HTTPException(status_code=404, detail="Monitor not found")
             
+        # ping_history.checked_at is a naive TIMESTAMP (UTC); asyncpg can't bind an
+        # aware datetime to it, so pass a naive-UTC cutoff for this query.
+        ping_cutoff = start_time.replace(tzinfo=None)
         pings = await conn.fetch(
             "SELECT is_up, response_time_ms FROM ping_history WHERE url_id = $1 AND checked_at >= $2",
-            url_id, start_time
+            url_id, ping_cutoff
         )
         
         incidents = await conn.fetch(
